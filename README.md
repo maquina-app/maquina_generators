@@ -133,6 +133,33 @@ Credentials are resolved in order:
 
 ---
 
+### Rack Attack -- Request Protection
+
+**Rack Attack** installs the [rack-attack](https://github.com/rack/rack-attack) gem with default security rules to block common vulnerability scans and throttle abusive requests.
+
+#### What it generates
+
+- **Initializer:** `config/initializers/rack_attack.rb` with blocklists, safelists, and throttles
+
+#### Usage
+
+```bash
+rails g maquina:rack_attack
+```
+
+The generator automatically runs `bundle install`.
+
+#### Default Protections
+
+- **Blocklists:** PHP files (`*.php`), WordPress paths (`wp-admin`, `wp-login`, etc.), sensitive files (`.env`, `.git`, `/etc/passwd`, etc.), scanner targets (`phpmyadmin`, `cgi-bin`, etc.)
+- **Safelists:** Localhost (`127.0.0.1`, `::1`)
+- **Throttles:** 300 requests/5min per IP (general), 5 login attempts/20s per IP
+- **Responses:** 403 Forbidden for blocklisted, 429 Too Many Requests for throttled
+
+Customize rules in `config/initializers/rack_attack.rb`.
+
+---
+
 ## Adding New Generators
 
 Create a new folder under `lib/generators/maquina/`:

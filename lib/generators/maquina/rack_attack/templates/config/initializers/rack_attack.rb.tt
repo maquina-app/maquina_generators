@@ -1,0 +1,95 @@
+# frozen_string_literal: true
+
+# Rack::Attack configuration
+# https://github.com/rack/rack-attack
+
+# Safelist localhost
+Rack::Attack.safelist("allow-localhost") do |req|
+  req.ip == "127.0.0.1" || req.ip == "::1"
+end
+
+# ---------------------------------------------------------------------------
+# Blocklists — common vulnerability scanner paths
+# ---------------------------------------------------------------------------
+
+# Block PHP file requests
+Rack::Attack.blocklist("block-php") do |req|
+  req.path.match?(/\.php\d?$/i)
+end
+
+# Block WordPress paths
+WORDPRESS_PATHS = %w[
+  /wp-admin
+  /wp-login
+  /wp-content
+  /wp-includes
+  /xmlrpc.php
+  /wp-config
+  /wp-cron
+].freeze
+
+Rack::Attack.blocklist("block-wordpress") do |req|
+  WORDPRESS_PATHS.any? { |path| req.path.downcase.start_with?(path) }
+end
+
+# Block sensitive file access
+SENSITIVE_PATTERNS = %w[
+  /.env
+  /.git
+  /.htaccess
+  /.htpasswd
+  /.aws
+  /.ssh
+  /.svn
+].freeze
+
+Rack::Attack.blocklist("block-sensitive-files") do |req|
+  path = req.path.downcase
+  SENSITIVE_PATTERNS.any? { |pattern| path.start_with?(pattern) } ||
+    path.include?("/etc/passwd") ||
+    path.include?("/etc/shadow")
+end
+
+# Block common scanner targets
+SCANNER_PATHS = %w[
+  /cgi-bin
+  /phpmyadmin
+  /pma
+  /myadmin
+  /phpinfo
+  /mysqladmin
+  /admin/config.php
+  /solr/
+  /actuator
+  /telescope/requests
+  /debug
+  /_ignition
+  /vendor/phpunit
+].freeze
+
+Rack::Attack.blocklist("block-scanner-targets") do |req|
+  SCANNER_PATHS.any? { |path| req.path.downcase.start_with?(path) }
+end
+
+# ---------------------------------------------------------------------------
+# Throttles
+# ---------------------------------------------------------------------------
+
+# General rate limit: 300 requests per 5 minutes per IP
+Rack::Attack.throttle("req/ip", limit: 300, period: 5.minutes) do |req|
+  req.ip unless req.path.start_with?("/assets")
+end
+
+# Login throttle: 5 attempts per 20 seconds per IP
+Rack::Attack.throttle("login/ip", limit: 5, period: 20.seconds) do |req|
+  req.ip if req.path == "/session" && req.post?
+end
+
+# ---------------------------------------------------------------------------
+# Custom responses
+# ---------------------------------------------------------------------------
+
+# Return 403 Forbidden for blocklisted requests
+Rack::Attack.blocklisted_responder = lambda do |_request|
+  [403, {"content-type" => "text/plain"}, ["Forbidden\n"]]
+end

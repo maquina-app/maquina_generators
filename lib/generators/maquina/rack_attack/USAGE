@@ -1,0 +1,15 @@
+Description:
+  Installs Rack::Attack with default security rules to block common
+  vulnerability scans and throttle abusive requests.
+
+  Default protections:
+    - Blocks PHP file requests (*.php)
+    - Blocks WordPress paths (wp-admin, wp-login, wp-content, etc.)
+    - Blocks sensitive file access (.env, .git, /etc/passwd, etc.)
+    - Blocks common scanner targets (phpmyadmin, cgi-bin, etc.)
+    - Safelists localhost
+    - Throttles general requests (300/5min per IP)
+    - Throttles login attempts (5/20s per IP)
+
+Examples:
+  rails g maquina:rack_attack
