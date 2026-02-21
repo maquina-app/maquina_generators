@@ -1,0 +1,51 @@
+class Registration::VerificationsController < ApplicationController
+  allow_unauthenticated_access
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_registration_verification_path, alert: t("flash.general.rate_limited") }
+
+  # GET /registration/verification/new
+  def new
+    @verification = EmailVerification.find_by(id: session[:pending_verification_id])
+    @email = @verification&.email || session[:pending_signup_email]
+    redirect_to new_registration_path unless @email
+  end
+
+  # POST /registration/verification
+  def create
+    @verification = EmailVerification.find_by(id: session[:pending_verification_id])
+    @email = @verification&.email || session[:pending_signup_email]
+
+    unless @verification
+      flash.now[:alert] = t("flash.registrations.invalid_code")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    if @verification.expired?
+      flash.now[:alert] = t("flash.registrations.code_expired")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    if @verification.code != params[:code]&.upcase&.strip
+      @verification.increment!(:attempts)
+      Rails.logger.warn "[AUTH] Invalid verification code attempt for #{@email} from #{request.remote_ip} (attempt #{@verification.attempts})"
+      flash.now[:alert] = t("flash.registrations.invalid_code")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    user = User.create!(
+      email_address: @verification.email,
+      password: User.generate_secure_password,
+      locale: @verification.locale || I18n.default_locale.to_s
+    )
+
+    @verification.mark_verified!
+    session.delete(:pending_verification_id)
+    session.delete(:pending_signup_email)
+
+    Rails.logger.info "[AUTH] Successful registration for #{user.email_address} from #{request.remote_ip}"
+    start_new_session_for(user)
+    redirect_to root_path, notice: t("flash.registrations.create.success")
+  end
+end

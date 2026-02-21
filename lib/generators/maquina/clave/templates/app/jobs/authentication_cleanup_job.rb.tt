@@ -1,0 +1,13 @@
+class AuthenticationCleanupJob < ApplicationJob
+  queue_as :default
+
+  def perform
+    # Delete email verifications older than 24 hours
+    old_verifications_count = EmailVerification.where("created_at < ?", 24.hours.ago).delete_all
+    Rails.logger.info "AuthenticationCleanupJob: Deleted #{old_verifications_count} old email verifications"
+
+    # Delete expired sessions
+    expired_sessions_count = Session.cleanup_expired!
+    Rails.logger.info "AuthenticationCleanupJob: Deleted #{expired_sessions_count} expired sessions"
+  end
+end

@@ -1,0 +1,11 @@
+<%%= t("verification_mailer.verification_code.title") %>
+
+<%%= t("verification_mailer.verification_code.instructions") %>
+
+<%%= @verification.code %>
+
+<%%= t("verification_mailer.verification_code.expires_in") %>
+
+---
+
+<%%= t("verification_mailer.verification_code.ignore_if_not_you") %>

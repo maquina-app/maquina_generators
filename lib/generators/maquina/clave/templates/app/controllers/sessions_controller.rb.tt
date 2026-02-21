@@ -1,0 +1,56 @@
+class SessionsController < ApplicationController
+  allow_unauthenticated_access only: %i[new create]
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_session_path, alert: t("flash.general.rate_limited") }
+
+  # GET /session/new
+  def new
+  end
+
+  # POST /session
+  def create
+    email = params[:email_address]&.downcase&.strip
+    user = User.find_by(email_address: email)
+
+    # Check cooldown regardless of user existence
+    recent_verification = EmailVerification.for_email(email).recent.first
+    if recent_verification
+      session[:pending_verification_id] = recent_verification.id
+      session[:pending_login_email] = email
+      redirect_to new_session_verification_path,
+        notice: t("flash.sessions.code_already_sent", minutes: recent_verification.minutes_until_resend)
+      return
+    end
+
+    if user && !user.blocked?
+      # User exists and not blocked - send verification
+      verification = EmailVerification.create!(
+        email: email,
+        code: SecureRandom.hex(3).upcase,
+        verification_type: "login",
+        locale: user.locale || I18n.default_locale.to_s,
+        expires_at: 15.minutes.from_now
+      )
+
+      Rails.logger.info "[AUTH] Verification code sent for login #{email} from #{request.remote_ip}"
+      VerificationMailer.verification_code(verification).deliver_later
+      session[:pending_verification_id] = verification.id
+    else
+      # No user OR blocked - don't send email, but show same UI
+      if user&.blocked?
+        Rails.logger.info "[AUTH] Login attempted for blocked user #{email} from #{request.remote_ip}"
+      else
+        Rails.logger.info "[AUTH] Login attempted for non-existent email #{email} from #{request.remote_ip}"
+      end
+      session[:pending_login_email] = email
+    end
+
+    redirect_to new_session_verification_path
+  end
+
+  # DELETE /session
+  def destroy
+    Rails.logger.info "[AUTH] Logout for user #{Current.session.user.email_address} from #{request.remote_ip}"
+    terminate_session
+    redirect_to new_session_path, notice: t("flash.sessions.destroy.success"), status: :see_other
+  end
+end

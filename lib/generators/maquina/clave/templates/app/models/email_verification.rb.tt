@@ -1,0 +1,40 @@
+class EmailVerification < ApplicationRecord
+  VERIFICATION_TYPES = %w[signup login].freeze
+  COOLDOWN_MINUTES = 15
+
+  validates :email, presence: true, format: {with: URI::MailTo::EMAIL_REGEXP}
+  validates :code, presence: true
+  validates :verification_type, presence: true, inclusion: {in: VERIFICATION_TYPES}
+  validates :expires_at, presence: true
+
+  normalizes :email, with: ->(email) { email.strip.downcase }
+  normalizes :code, with: ->(code) { code.strip.upcase }
+
+  scope :pending, -> { where(verified_at: nil) }
+  scope :expired, -> { where("expires_at < ?", Time.current) }
+  scope :active, -> { pending.where("expires_at >= ?", Time.current) }
+  scope :for_email, ->(email) { where("LOWER(email) = ?", email.to_s.downcase) }
+  scope :recent, -> { pending.where("created_at > ?", COOLDOWN_MINUTES.minutes.ago) }
+
+  def expired?
+    expires_at < Time.current
+  end
+
+  def verified?
+    verified_at.present?
+  end
+
+  def can_resend?
+    created_at <= COOLDOWN_MINUTES.minutes.ago
+  end
+
+  def minutes_until_resend
+    return 0 if can_resend?
+
+    ((created_at + COOLDOWN_MINUTES.minutes - Time.current) / 60).ceil
+  end
+
+  def mark_verified!
+    update!(verified_at: Time.current)
+  end
+end

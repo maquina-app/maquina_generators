@@ -1,0 +1,15 @@
+class VerificationMailer < ApplicationMailer
+  default from: "App <noreply@example.com>"
+
+  def verification_code(email_verification)
+    @verification = email_verification
+    locale = email_verification.locale || I18n.default_locale.to_s
+
+    I18n.with_locale(locale) do
+      mail(
+        to: email_verification.email,
+        subject: I18n.t("verification_mailer.verification_code.subject")
+      )
+    end
+  end
+end

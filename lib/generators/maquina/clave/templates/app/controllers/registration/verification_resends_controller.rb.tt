@@ -1,0 +1,38 @@
+class Registration::VerificationResendsController < ApplicationController
+  allow_unauthenticated_access
+  rate_limit to: 5, within: 3.minutes, only: :create, with: -> { redirect_to new_registration_verification_path, alert: t("flash.general.rate_limited") }
+
+  # POST /registration/verification_resend
+  def create
+    old_verification = EmailVerification.find_by(id: session[:pending_verification_id])
+
+    unless old_verification
+      redirect_to new_registration_path
+      return
+    end
+
+    email = old_verification.email
+
+    if EmailVerification.for_email(email).recent.exists?
+      recent = EmailVerification.for_email(email).recent.first
+      redirect_to new_registration_verification_path,
+        alert: t("flash.registrations.cooldown", minutes: recent.minutes_until_resend)
+      return
+    end
+
+    verification = EmailVerification.create!(
+      email: email,
+      code: SecureRandom.hex(3).upcase,
+      verification_type: "signup",
+      locale: old_verification.locale || I18n.locale.to_s,
+      expires_at: 15.minutes.from_now
+    )
+
+    Rails.logger.info "[AUTH] Verification code resent for registration #{email} from #{request.remote_ip}"
+    VerificationMailer.verification_code(verification).deliver_later
+    session[:pending_verification_id] = verification.id
+
+    redirect_to new_registration_verification_path,
+      notice: t("flash.registrations.code_resent")
+  end
+end

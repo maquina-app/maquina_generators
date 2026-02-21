@@ -1,0 +1,101 @@
+es:
+  flash:
+    sessions:
+      create:
+        success: "Has iniciado sesion correctamente."
+      destroy:
+        success: "Has cerrado sesion correctamente."
+      code_sent: "Te enviamos un codigo de verificacion."
+      invalid_code: "El codigo es incorrecto. Por favor, intenta de nuevo."
+      code_expired: "El codigo ha expirado. Solicita uno nuevo."
+      code_resent: "Te enviamos un nuevo codigo."
+      cooldown: "Debes esperar %{minutes} minutos antes de solicitar otro codigo."
+      code_already_sent: "Ya te enviamos un codigo. Revisa tu correo (incluyendo spam). Podras solicitar uno nuevo en %{minutes} minutos."
+    registrations:
+      create:
+        success: "Tu cuenta ha sido creada. Bienvenido!"
+      code_sent: "Te enviamos un codigo de verificacion a tu correo."
+      email_plus_not_allowed: "No se permiten correos con '+'. Usa tu direccion principal sin alias."
+      email_taken: "Ya existe una cuenta con este correo. Quieres iniciar sesion?"
+      invalid_code: "El codigo es incorrecto. Por favor, intenta de nuevo."
+      code_expired: "El codigo ha expirado. Solicita uno nuevo."
+      code_resent: "Te enviamos un nuevo codigo."
+      cooldown: "Debes esperar %{minutes} minutos antes de solicitar otro codigo."
+      code_already_sent: "Ya te enviamos un codigo. Revisa tu correo (incluyendo spam). Podras solicitar uno nuevo en %{minutes} minutos."
+    general:
+      unauthorized: "Debes iniciar sesion para acceder a esta pagina."
+      forbidden: "No tienes permiso para realizar esta accion."
+      not_found: "El recurso que buscas no existe."
+      rate_limited: "Demasiados intentos. Por favor, espera unos minutos e intenta de nuevo."
+
+  sessions:
+    new:
+      title: "Iniciar sesion"
+      email: "Correo electronico"
+      email_placeholder: "tu@correo.com"
+      email_instructions: "Ingresa tu correo y te enviaremos un codigo de 6 digitos."
+      spam_note: "Revisa tu carpeta de spam si no recibes el correo."
+      submit: "Enviar codigo"
+      no_account: "No tienes cuenta?"
+      sign_up: "Registrate"
+
+  session:
+    verifications:
+      new:
+        title: "Verifica tu identidad"
+        sent_to: "Si tienes cuenta, enviamos un codigo a %{email}"
+        enter_code: "Ingresa el codigo"
+        submit: "Iniciar sesion"
+        check_spam: "Revisa tu carpeta de spam."
+        didnt_receive: "No recibiste el codigo?"
+        resend: "Reenviar codigo"
+
+  registrations:
+    new:
+      title: "Crear cuenta"
+      email: "Correo electronico"
+      email_placeholder: "tu@correo.com"
+      email_instructions: "Ingresa tu correo electronico. Te enviaremos un codigo de 6 digitos para verificar tu cuenta."
+      spam_note: "Revisa tu carpeta de spam si no recibes el correo."
+      submit: "Enviar codigo"
+      have_account: "Ya tienes cuenta?"
+      sign_in: "Inicia sesion"
+
+  registration:
+    verifications:
+      new:
+        title: "Verifica tu correo"
+        sent_to: "Enviamos un codigo de 6 digitos a %{email}"
+        enter_code: "Ingresa el codigo"
+        submit: "Verificar"
+        check_spam: "Revisa tu carpeta de spam si no lo recibes."
+        didnt_receive: "No recibiste el codigo?"
+        resend: "Reenviar codigo"
+
+  verification_mailer:
+    verification_code:
+      subject: "Tu codigo de verificacion"
+      title: "Codigo de verificacion"
+      instructions: "Ingresa este codigo para continuar:"
+      expires_in: "Este codigo expira en 15 minutos."
+      ignore_if_not_you: "Si no solicitaste este codigo, puedes ignorar este correo."
+
+  activerecord:
+    models:
+      user:
+        one: "Usuario"
+        other: "Usuarios"
+    attributes:
+      user:
+        email_address: "Correo electronico"
+        name: "Nombre"
+        password: "Contrasena"
+        locale: "Idioma"
+        blocked_at: "Bloqueado en"
+        blocked_reason: "Razon de bloqueo"
+    errors:
+      models:
+        user:
+          attributes:
+            email_address:
+              plus_not_allowed: "No se permiten direcciones con '+'. Por favor, usa tu correo principal sin alias."

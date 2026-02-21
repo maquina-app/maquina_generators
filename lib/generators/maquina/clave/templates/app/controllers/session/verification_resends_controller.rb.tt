@@ -1,0 +1,44 @@
+class Session::VerificationResendsController < ApplicationController
+  allow_unauthenticated_access
+  rate_limit to: 5, within: 3.minutes, only: :create, with: -> { redirect_to new_session_verification_path, alert: t("flash.general.rate_limited") }
+
+  # POST /session/verification_resend
+  def create
+    old_verification = EmailVerification.find_by(id: session[:pending_verification_id])
+    email = old_verification&.email || session[:pending_login_email]
+
+    unless email
+      redirect_to new_session_path
+      return
+    end
+
+    if EmailVerification.for_email(email).recent.exists?
+      recent = EmailVerification.for_email(email).recent.first
+      redirect_to new_session_verification_path,
+        alert: t("flash.sessions.cooldown", minutes: recent.minutes_until_resend)
+      return
+    end
+
+    user = User.find_by(email_address: email)
+
+    if user && !user.blocked?
+      verification = EmailVerification.create!(
+        email: email,
+        code: SecureRandom.hex(3).upcase,
+        verification_type: "login",
+        locale: user.locale || I18n.default_locale.to_s,
+        expires_at: 15.minutes.from_now
+      )
+
+      Rails.logger.info "[AUTH] Verification code resent for login #{email} from #{request.remote_ip}"
+      VerificationMailer.verification_code(verification).deliver_later
+      session[:pending_verification_id] = verification.id
+    else
+      Rails.logger.info "[AUTH] Verification resend attempted for non-existent/blocked email #{email} from #{request.remote_ip}"
+    end
+
+    # Always show success (don't reveal if user exists)
+    redirect_to new_session_verification_path,
+      notice: t("flash.sessions.code_resent")
+  end
+end

@@ -1,0 +1,20 @@
+module AuthenticationHelper
+  # Masks an email address for privacy display
+  # "mario@example.com" -> "ma***@example.com"
+  # "jo@example.com" -> "j*@example.com"
+  # "a@example.com" -> "a@example.com"
+  def mask_email(email)
+    return "" if email.blank?
+
+    local, domain = email.split("@")
+    return email if local.nil? || domain.nil?
+
+    masked_local = if local.length <= 2
+      local[0] + "*" * (local.length - 1)
+    else
+      local[0..1] + "*" * (local.length - 2)
+    end
+
+    "#{masked_local}@#{domain}"
+  end
+end

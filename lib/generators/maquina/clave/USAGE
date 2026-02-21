@@ -1,0 +1,11 @@
+Description:
+  Generates passwordless email-code authentication (Clave).
+
+  Creates models, controllers, views, mailer, job, locale files, and
+  migrations for a complete passwordless authentication system using
+  email verification codes.
+
+Examples:
+  rails g maquina:clave                        # Full install
+  rails g maquina:clave --skip-registration    # Sign-in only (no sign-up flow)
+  rails g maquina:clave --skip-views           # No view templates (API-only or custom views)

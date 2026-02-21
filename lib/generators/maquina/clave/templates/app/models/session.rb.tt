@@ -1,0 +1,18 @@
+class Session < ApplicationRecord
+  belongs_to :user
+
+  scope :active, -> { where("expires_at > ? OR expires_at IS NULL", Time.current) }
+  scope :expired, -> { where("expires_at <= ? AND expires_at IS NOT NULL", Time.current) }
+
+  def self.cleanup_expired!
+    expired.delete_all
+  end
+
+  def expired?
+    expires_at.present? && expires_at < Time.current
+  end
+
+  def active?
+    !expired?
+  end
+end

@@ -1,0 +1,38 @@
+class User < ApplicationRecord
+  has_secure_password
+  has_many :sessions, dependent: :destroy
+
+  normalizes :email_address, with: ->(e) { e.strip.downcase }
+
+  validates :email_address, uniqueness: true
+  validate :email_cannot_contain_plus
+
+  scope :active, -> { where(blocked_at: nil) }
+  scope :blocked, -> { where.not(blocked_at: nil) }
+
+  def self.generate_secure_password
+    SecureRandom.hex(10)
+  end
+
+  def blocked?
+    blocked_at.present?
+  end
+
+  def block!(reason: nil)
+    update!(blocked_at: Time.current, blocked_reason: reason)
+  end
+
+  def unblock!
+    update!(blocked_at: nil, blocked_reason: nil)
+  end
+
+  private
+
+  def email_cannot_contain_plus
+    return if email_address.blank?
+
+    if email_address.include?("+")
+      errors.add(:email_address, :plus_not_allowed)
+    end
+  end
+end

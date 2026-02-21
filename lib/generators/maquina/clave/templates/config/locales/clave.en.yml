@@ -1,0 +1,101 @@
+en:
+  flash:
+    sessions:
+      create:
+        success: "You have signed in successfully."
+      destroy:
+        success: "You have signed out successfully."
+      code_sent: "We sent you a verification code."
+      invalid_code: "The code is incorrect. Please try again."
+      code_expired: "The code has expired. Request a new one."
+      code_resent: "We sent you a new code."
+      cooldown: "You must wait %{minutes} minutes before requesting another code."
+      code_already_sent: "We already sent you a code. Check your email (including spam). You can request a new one in %{minutes} minutes."
+    registrations:
+      create:
+        success: "Your account has been created. Welcome!"
+      code_sent: "We sent a verification code to your email."
+      email_plus_not_allowed: "Email addresses with '+' are not allowed. Use your main email without aliases."
+      email_taken: "An account with this email already exists. Would you like to sign in?"
+      invalid_code: "The code is incorrect. Please try again."
+      code_expired: "The code has expired. Request a new one."
+      code_resent: "We sent you a new code."
+      cooldown: "You must wait %{minutes} minutes before requesting another code."
+      code_already_sent: "We already sent you a code. Check your email (including spam). You can request a new one in %{minutes} minutes."
+    general:
+      unauthorized: "You must sign in to access this page."
+      forbidden: "You are not authorized to perform this action."
+      not_found: "The resource you're looking for doesn't exist."
+      rate_limited: "Too many attempts. Please wait a few minutes and try again."
+
+  sessions:
+    new:
+      title: "Sign in"
+      email: "Email address"
+      email_placeholder: "you@example.com"
+      email_instructions: "Enter your email and we'll send you a 6-digit code."
+      spam_note: "Check your spam folder if you don't receive the email."
+      submit: "Send code"
+      no_account: "Don't have an account?"
+      sign_up: "Sign up"
+
+  session:
+    verifications:
+      new:
+        title: "Verify your identity"
+        sent_to: "If you have an account, we sent a code to %{email}"
+        enter_code: "Enter the code"
+        submit: "Sign in"
+        check_spam: "Check your spam folder."
+        didnt_receive: "Didn't receive the code?"
+        resend: "Resend code"
+
+  registrations:
+    new:
+      title: "Create account"
+      email: "Email address"
+      email_placeholder: "you@example.com"
+      email_instructions: "Enter your email address. We'll send you a 6-digit code to verify your account."
+      spam_note: "Check your spam folder if you don't receive the email."
+      submit: "Send code"
+      have_account: "Already have an account?"
+      sign_in: "Sign in"
+
+  registration:
+    verifications:
+      new:
+        title: "Verify your email"
+        sent_to: "We sent a 6-digit code to %{email}"
+        enter_code: "Enter the code"
+        submit: "Verify"
+        check_spam: "Check your spam folder if you don't receive it."
+        didnt_receive: "Didn't receive the code?"
+        resend: "Resend code"
+
+  verification_mailer:
+    verification_code:
+      subject: "Your verification code"
+      title: "Verification code"
+      instructions: "Enter this code to continue:"
+      expires_in: "This code expires in 15 minutes."
+      ignore_if_not_you: "If you didn't request this code, you can ignore this email."
+
+  activerecord:
+    models:
+      user:
+        one: "User"
+        other: "Users"
+    attributes:
+      user:
+        email_address: "Email address"
+        name: "Name"
+        password: "Password"
+        locale: "Language"
+        blocked_at: "Blocked at"
+        blocked_reason: "Blocked reason"
+    errors:
+      models:
+        user:
+          attributes:
+            email_address:
+              plus_not_allowed: "Email addresses with '+' are not allowed. Please use your main email without aliases."

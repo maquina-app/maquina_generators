@@ -1,0 +1,63 @@
+class RegistrationsController < ApplicationController
+  allow_unauthenticated_access
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_registration_path, alert: t("flash.general.rate_limited") }
+
+  def new
+  end
+
+  def create
+    email = registration_params[:email_address]&.downcase&.strip
+
+    if email&.include?("+")
+      Rails.logger.warn "[AUTH] Registration attempted with + in email #{email} from #{request.remote_ip}"
+      flash.now[:alert] = t("flash.registrations.email_plus_not_allowed")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    existing_user = User.find_by(email_address: email)
+
+    if existing_user
+      if existing_user.blocked?
+        # Fail silently - show same UI but don't send email
+        Rails.logger.info "[AUTH] Registration attempted for blocked user #{email} from #{request.remote_ip}"
+        session[:pending_signup_email] = email
+        redirect_to new_registration_verification_path
+      else
+        Rails.logger.info "[AUTH] Registration attempted for existing email #{email} from #{request.remote_ip}"
+        flash.now[:alert] = t("flash.registrations.email_taken")
+        render :new, status: :unprocessable_entity
+      end
+      return
+    end
+
+    recent_verification = EmailVerification.for_email(email).recent.first
+    if recent_verification
+      session[:pending_verification_id] = recent_verification.id
+      session[:pending_signup_email] = email
+      redirect_to new_registration_verification_path,
+        notice: t("flash.registrations.code_already_sent", minutes: recent_verification.minutes_until_resend)
+      return
+    end
+
+    verification = EmailVerification.create!(
+      email: email,
+      code: SecureRandom.hex(3).upcase,
+      verification_type: "signup",
+      locale: I18n.locale.to_s,
+      expires_at: 15.minutes.from_now
+    )
+
+    Rails.logger.info "[AUTH] Verification code sent for new registration #{email} from #{request.remote_ip}"
+    VerificationMailer.verification_code(verification).deliver_later
+    session[:pending_verification_id] = verification.id
+
+    redirect_to new_registration_verification_path
+  end
+
+  private
+
+  def registration_params
+    params.permit(:email_address)
+  end
+end

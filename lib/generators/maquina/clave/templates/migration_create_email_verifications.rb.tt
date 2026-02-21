@@ -1,0 +1,17 @@
+class CreateEmailVerifications < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :email_verifications do |t|
+      t.string :email, null: false
+      t.string :code, null: false
+      t.string :verification_type, null: false
+      t.datetime :expires_at, null: false
+      t.datetime :verified_at
+      t.integer :attempts, default: 0
+      t.string :locale
+
+      t.timestamps
+    end
+
+    add_index :email_verifications, [:email, :created_at]
+  end
+end
