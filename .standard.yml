@@ -6,3 +6,4 @@ default_ignores: false # default: true
 
 ignore: # default: []
   - "test/tmp/**/*"
+  - "vendor/**/*"
