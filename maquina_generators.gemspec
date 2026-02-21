@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Rails generators from the Maquina umbrella"
   spec.description = "A collection of Rails generators: clave (passwordless auth), and more to come."
-  spec.homepage = "https://github.com/maquina-app/maquina_generators"
+  spec.homepage = "https://maquina.app"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
 
   spec.require_paths = ["lib"]
 
-  spec.add_development_dependency "rails", ">= 7.2"
   spec.add_development_dependency "minitest", "~> 5.0"
+  spec.add_development_dependency "rails", ">= 7.2"
   spec.add_development_dependency "rake", "~> 13.0"
 end

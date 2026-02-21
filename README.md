@@ -60,6 +60,76 @@ All generated code lives in your app -- edit it directly:
 - **Email sender:** Edit `app/mailers/verification_mailer.rb`
 - **Translations:** Edit `config/locales/clave.*.yml`
 
+### Solid Errors -- Error Tracking Dashboard
+
+**Solid Errors** installs the [solid_errors](https://github.com/fractaledmind/solid_errors) gem with HTTP authentication and engine mounting.
+
+#### What it generates
+
+- **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
+- **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
+- **Route:** Mounts `SolidErrors::Engine` under a configurable prefix
+
+#### Usage
+
+```bash
+rails g maquina:solid_errors --prefix /admin
+```
+
+The generator automatically runs `bundle install` and `solid_errors:install`. After running, execute `bin/rails db:migrate`.
+
+#### Options
+
+```bash
+rails g maquina:solid_errors --prefix /admin                          # Default env vars
+rails g maquina:solid_errors --prefix /backstage \
+  --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
+```
+
+#### Authentication
+
+Credentials are resolved in order:
+
+1. `Rails.application.credentials.backstage.username` / `.password`
+2. `ENV["SOLID_ERRORS_USER"]` / `ENV["SOLID_ERRORS_PASSWORD"]` (configurable)
+
+---
+
+### Mission Control Jobs -- Job Queue Dashboard
+
+**Mission Control Jobs** installs the [mission_control-jobs](https://github.com/rails/mission_control-jobs) gem with HTTP authentication and engine mounting.
+
+#### What it generates
+
+- **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
+- **Initializer:** Sets base controller class, credentials-first auth with ENV variable fallback
+- **Route:** Mounts `MissionControl::Jobs::Engine` under a configurable prefix
+
+#### Usage
+
+```bash
+rails g maquina:mission_control_jobs --prefix /admin
+```
+
+The generator automatically runs `bundle install`.
+
+#### Options
+
+```bash
+rails g maquina:mission_control_jobs --prefix /admin                  # Default env vars
+rails g maquina:mission_control_jobs --prefix /backstage \
+  --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
+```
+
+#### Authentication
+
+Credentials are resolved in order:
+
+1. `Rails.application.credentials.backstage.username` / `.password`
+2. `ENV["MISSION_CONTROL_JOBS_USER"]` / `ENV["MISSION_CONTROL_JOBS_PASSWORD"]` (configurable)
+
+---
+
 ## Adding New Generators
 
 Create a new folder under `lib/generators/maquina/`:
@@ -79,6 +149,8 @@ The generator class should be `Maquina::Generators::YourGeneratorGenerator` and 
 ```bash
 bundle install
 rake test
+bundle exec standardrb       # Lint
+bundle exec standardrb --fix # Auto-fix
 ```
 
 ## License
