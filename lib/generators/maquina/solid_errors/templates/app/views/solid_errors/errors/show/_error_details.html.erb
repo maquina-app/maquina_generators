@@ -1,0 +1,132 @@
+<%# locals: (error:, latest_occurrence: nil) %>
+
+<% context_data = latest_occurrence&.context || {}
+backtrace_data =
+  if latest_occurrence
+    backtrace = latest_occurrence.parsed_backtrace
+    lines = backtrace.is_a?(Array) ? backtrace : backtrace.lines
+    lines.first(10).map(&:to_s)
+  else
+    []
+  end %>
+
+<div
+  data-controller="clipboard"
+  data-clipboard-error-class-value="<%= error.exception_class %>"
+  data-clipboard-severity-value="<%= error.severity %>"
+  data-clipboard-source-value="<%= error.source %>"
+  data-clipboard-message-value="<%= error.message %>"
+  data-clipboard-context-value="<%= context_data.to_json %>"
+  data-clipboard-backtrace-value="<%= backtrace_data.to_json %>"
+>
+  <%= render "components/card" do %>
+    <div class="p-6 pb-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <%= render "components/severity_badge", severity: error.severity %>
+
+          <h2 class="text-lg font-semibold text-foreground">
+            <code class="break-words"><%= error.exception_class %></code>
+          </h2>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <%= render "components/error_status_badge", resolved: error.resolved? %>
+
+          <!-- Copy for LLM Button -->
+          <button
+            type="button"
+            data-action="click->clipboard#copy"
+            class="
+              inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+              transition-colors bg-primary text-primary-foreground hover:bg-primary/90
+              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+            "
+            title="Copy error details in LLM-friendly format"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-clipboard-copy"
+            >
+              <rect
+                width="8"
+                height="4"
+                x="8"
+                y="2"
+                rx="1"
+                ry="1"
+              />
+
+              <path
+                d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+              />
+            </svg>
+
+            <span>Copy for LLM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 pt-0 space-y-4">
+      <!-- Source -->
+      <div>
+        <span class="text-sm font-medium text-muted-foreground">Source</span>
+
+        <p class="text-sm text-foreground mt-1 break-words">
+          <em><code><%= error.source %></code></em>
+        </p>
+      </div>
+
+      <!-- Message with overflow handling -->
+      <div>
+        <span class="text-sm font-medium text-muted-foreground">Message</span>
+
+        <pre
+          class="
+            mt-2 text-sm text-foreground whitespace-pre-wrap break-words font-mono
+            bg-muted/50 p-4 rounded-md border border-border overflow-auto max-h-64
+          "
+        ><%= error.message %></pre>
+      </div>
+
+      <!-- Root Paths with overflow handling -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-muted-foreground">
+            Project Root
+          </span>
+
+          <p
+            class="
+              text-xs font-mono text-foreground mt-1 break-all
+              overflow-wrap-anywhere
+            "
+          >
+            <%= SolidErrors::BacktraceLine::RAILS_ROOT %>
+          </p>
+        </div>
+
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-muted-foreground">
+            Gem Paths
+          </span>
+
+          <div class="text-xs font-mono text-foreground mt-1 space-y-1">
+            <% Gem.path.each do |path| %>
+              <p class="break-all overflow-wrap-anywhere"><%= path %></p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,74 @@
+<div class="container mx-auto px-4 py-8">
+  <!-- Header with tabs -->
+  <div class="mb-6 border-b border-border">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-foreground">Errors</h1>
+
+      <!-- Delete All Resolved Button - Only on Resolved tab -->
+      <% if error_scope.resolved? %>
+        <% resolved_count = SolidErrors::Error.resolved.count %>
+        <% if resolved_count > 0 %>
+          <%= button_to main_app.solid_errors_resolved_errors_path,
+              method: :delete,
+              form: { data: { turbo: false } },
+              data: { 
+                turbo_confirm: "This will queue deletion of all #{resolved_count} resolved error#{resolved_count == 1 ? '' : 's'}. The process will run in the background. Are you sure?" 
+              },
+              class: "button button-danger inline-flex items-center gap-2 py-2 px-4 text-sm transition-all hover:scale-[1.02] active:scale-95" do %>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide"
+            >
+              <path d="M3 6h18" />
+
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+
+              <line
+                x1="10"
+                x2="10"
+                y1="11"
+                y2="17"
+              />
+
+              <line
+                x1="14"
+                x2="14"
+                y1="11"
+                y2="17"
+              />
+            </svg>
+            <span>Delete All Resolved</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+      <%= link_to solid_errors.root_path(scope: :unresolved), 
+          class: "inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium #{ error_scope.unresolved? ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground' }" do %>
+        <span>⏳ Unresolved</span>
+      <% end %>
+
+      <%= link_to solid_errors.root_path(scope: :resolved),
+          class: "inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium #{ error_scope.resolved? ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground' }" do %>
+        <span>✅ Resolved</span>
+      <% end %>
+    </nav>
+  </div>
+
+  <!-- Error Grid -->
+  <div class="grid grid-cols-1 gap-4">
+    <%= render partial: "solid_errors/errors/error_card", collection: @errors, as: :error %>
+  </div>
+</div>

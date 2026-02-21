@@ -1,0 +1,77 @@
+<%# locals: (error:) %>
+
+<%= render "components/card" do %>
+  <div class="p-6 pb-2">
+    <h3 class="text-lg font-medium text-foreground">Properties</h3>
+  </div>
+
+  <div class="p-6 pt-0 space-y-4">
+    <!-- Severity -->
+    <div>
+      <span class="text-sm text-muted-foreground">Severity</span>
+
+      <div class="mt-1">
+        <%= render "components/severity_badge", severity: error.severity %>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div>
+      <span class="text-sm text-muted-foreground">Status</span>
+
+      <div class="mt-1">
+        <%= render "components/error_status_badge", resolved: error.resolved? %>
+      </div>
+    </div>
+
+    <!-- Exception Class -->
+    <div>
+      <span class="text-sm text-muted-foreground">Exception Class</span>
+
+      <p class="text-sm font-mono text-foreground mt-1">
+        <%= error.exception_class %>
+      </p>
+    </div>
+
+    <!-- Source -->
+    <div>
+      <span class="text-sm text-muted-foreground">Source</span>
+      <p class="text-sm font-mono text-foreground mt-1"><%= error.source %></p>
+    </div>
+
+    <!-- First Seen -->
+    <div>
+      <span class="text-sm text-muted-foreground">First Seen</span>
+
+      <p class="text-sm text-foreground mt-1">
+        <%= time_ago_in_words(error.occurrences.minimum(:created_at)) %> ago
+      </p>
+    </div>
+
+    <!-- Last Seen -->
+    <div>
+      <span class="text-sm text-muted-foreground">Last Seen</span>
+
+      <p class="text-sm text-foreground mt-1">
+        <%= time_ago_in_words(error.occurrences.maximum(:created_at)) %> ago
+      </p>
+    </div>
+
+    <!-- Occurrences Count -->
+    <div>
+      <span class="text-sm text-muted-foreground">Total Occurrences</span>
+      <p class="text-sm text-foreground mt-1"><%= error.occurrences.count %></p>
+    </div>
+
+    <% if error.resolved? %>
+      <!-- Resolved At -->
+      <div class="pt-4 border-t border-border">
+        <span class="text-sm text-muted-foreground">Resolved At</span>
+
+        <p class="text-sm text-foreground mt-1">
+          <%= time_ago_in_words(error.resolved_at) %> ago
+        </p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

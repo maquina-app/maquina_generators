@@ -1,0 +1,60 @@
+<%# locals: (error:) %>
+
+<%= render "components/card" do %>
+  <div class="p-6 pb-2">
+    <h3 class="text-lg font-medium text-foreground">Actions</h3>
+  </div>
+
+  <div class="p-6 pt-0 space-y-3">
+    <!-- Clean Old Occurrences Button - FIRST (only if more than 10) -->
+    <% if error.occurrences.count > 10 %>
+      <%= button_to main_app.solid_errors_error_occurrences_path(error),
+          method: :delete,
+          form: { data: { turbo: false } },
+          data: {
+            turbo_confirm: "This will delete #{error.occurrences.count - 10} old occurrence#{'s' if error.occurrences.count - 10 != 1}, keeping only the latest 10. Are you sure?"
+          },
+          class: "button w-full justify-center inline-flex items-center gap-2 py-2 px-4 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300 transition-all hover:scale-[1.02] active:scale-95" do %>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide"
+        >
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+
+          <line
+            x1="10"
+            x2="10"
+            y1="11"
+            y2="17"
+          />
+
+          <line
+            x1="14"
+            x2="14"
+            y1="11"
+            y2="17"
+          />
+        </svg>
+
+        <span>Clean Old Occurrences</span>
+      <% end %>
+    <% end %>
+
+    <!-- Resolve/Delete Button - SECOND -->
+    <% if error.resolved? %>
+      <%= render "solid_errors/errors/delete_button", error: error %>
+    <% else %>
+      <%= render "solid_errors/errors/resolve_button", error: error %>
+    <% end %>
+  </div>
+<% end %>

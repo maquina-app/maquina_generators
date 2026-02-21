@@ -1,0 +1,27 @@
+<%# locals: (line:) %>
+
+<details
+  <%= "open" if line.application? %>
+  class="group"
+  data-backtrace-filter-target="line"
+  data-backtrace-type="<%= line.application? ? 'application' : 'framework' %>"
+>
+  <summary class="cursor-pointer p-2 hover:bg-muted/50 rounded text-sm font-mono">
+    <% if line.filtered_file %>
+      <span class="text-muted-foreground"><%= File.dirname(line.filtered_file) %>/</span>
+      <span class="text-primary font-medium"><%= File.basename(line.filtered_file) %></span>
+      :
+      <span class="text-foreground font-medium"><%= line.filtered_number %></span>
+      <span class="text-muted-foreground">in</span>
+      <code class="text-green-600 font-medium"><%= line.filtered_method %></code>
+    <% else %>
+      <span class="text-muted-foreground"><%= line.unparsed_line %></span>
+    <% end %>
+  </summary>
+
+  <% if line.source.any? %>
+    <div class="mt-2 rounded-lg overflow-hidden">
+      <pre class="flex overflow-auto bg-slate-800 p-3 text-xs leading-none text-white"><code class="flex flex-1 flex-col min-h-full px-0 leading-none"><% line.source.each do |n, code| %><div class="line <%= n == line.filtered_number.to_i ? 'bg-slate-700/50' : '' %> leading-none py-0.5"><span class="inline-block w-10 text-right pr-2 text-slate-500 select-none"><%= n %></span><span><%= code %></span>          </div><% end %>      </code></pre>
+    </div>
+  <% end %>
+</details>

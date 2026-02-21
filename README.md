@@ -69,11 +69,13 @@ All generated code lives in your app -- edit it directly:
 - **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
 - **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
 - **Route:** Mounts `SolidErrors::Engine` under a configurable prefix
+- **Custom views:** Optionally copies custom Tailwind-styled views to override the gem defaults
 
 #### Usage
 
 ```bash
 rails g maquina:solid_errors --prefix /admin
+rails g maquina:solid_errors --prefix /admin --copy-views   # Include custom views
 ```
 
 The generator automatically runs `bundle install` and `solid_errors:install`. After running, execute `bin/rails db:migrate`.
@@ -82,6 +84,7 @@ The generator automatically runs `bundle install` and `solid_errors:install`. Af
 
 ```bash
 rails g maquina:solid_errors --prefix /admin                          # Default env vars
+rails g maquina:solid_errors --prefix /admin --copy-views             # With custom views
 rails g maquina:solid_errors --prefix /backstage \
   --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
 ```

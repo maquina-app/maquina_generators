@@ -1,0 +1,175 @@
+<%# locals: (occurrence:, open: false) %>
+
+<% seen_at = occurrence.created_at
+  backtrace = occurrence.parsed_backtrace %>
+
+<details
+  <%= "open" if open %>
+  class="group border-b border-border last:border-0"
+>
+  <summary class="cursor-pointer p-4 hover:bg-muted/50 transition-colors list-none">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="
+            lucide text-muted-foreground group-open:rotate-90
+            transition-transform
+          "
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+        <time class="text-sm font-medium text-foreground"><%= local_time(seen_at) %></time>
+        <span class="text-sm text-muted-foreground">(<%= time_ago_in_words(seen_at) %> ago)</span>
+      </div>
+    </div>
+  </summary>
+
+  <div class="p-4 pl-12 space-y-4" data-controller="backtrace-filter">
+    <!-- Context -->
+    <% if occurrence.context.present? %>
+      <div class="space-y-4">
+        <h4 class="text-sm font-medium text-foreground">Context</h4>
+
+        <% context = occurrence.context.dup
+          env_content = context.delete("env") || context.delete(:env)
+          body_content = context.delete("body") || context.delete(:body)
+          params_content = context.delete("params") || context.delete(:params) %>
+
+        <!-- Regular Context Keys (2-column grid) -->
+        <% if context.present? %>
+          <dl class="grid grid-cols-2 gap-3 text-sm">
+            <% context.each do |key, value| %>
+              <div>
+                <dt class="font-medium text-muted-foreground">
+                  <%= key.to_s.humanize %>
+                </dt>
+                <dd class="mt-1 font-mono text-foreground break-all">
+                  <%= value %>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        <% end %>
+
+        <!-- Env Content (full-width, scrollable) -->
+        <% if env_content.present? %>
+          <div>
+            <h5 class="text-sm font-medium text-muted-foreground mb-2">Env</h5>
+            <div
+              class="
+                max-h-96 overflow-y-auto rounded-md border border-border
+                bg-muted/30 p-3
+              "
+            >
+              <pre
+                class="
+                  font-mono text-xs text-foreground whitespace-pre-wrap
+                  break-all
+                "
+              ><%= JSON.pretty_generate(env_content) rescue env_content.inspect %></pre>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Body Content (full-width, scrollable) -->
+        <% if body_content.present? %>
+          <div>
+            <h5 class="text-sm font-medium text-muted-foreground mb-2">Body</h5>
+            <div
+              class="
+                max-h-96 overflow-y-auto rounded-md border border-border
+                bg-muted/30 p-3
+              "
+            >
+              <pre
+                class="
+                  font-mono text-xs text-foreground whitespace-pre-wrap
+                  break-all
+                "
+              ><%= JSON.pretty_generate(body_content) rescue body_content.inspect %></pre>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Params Content (full-width, scrollable) -->
+        <% if params_content.present? %>
+          <div>
+            <h5 class="text-sm font-medium text-muted-foreground mb-2">
+              Params
+            </h5>
+            <div
+              class="
+                max-h-96 overflow-y-auto rounded-md border border-border
+                bg-muted/30 p-3
+              "
+            >
+              <pre
+                class="
+                  font-mono text-xs text-foreground whitespace-pre-wrap
+                  break-all
+                "
+              ><%= JSON.pretty_generate(params_content) rescue params_content.inspect %></pre>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Backtrace with Filter -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-sm font-medium text-foreground">Backtrace</h4>
+
+        <!-- Filter Buttons -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium text-muted-foreground">Filter:</span>
+
+          <button
+            type="button"
+            data-filter="application"
+            data-backtrace-filter-target="button"
+            data-action="click->backtrace-filter#setFilter"
+            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+          >
+            Application
+          </button>
+
+          <button
+            type="button"
+            data-filter="framework"
+            data-backtrace-filter-target="button"
+            data-action="click->backtrace-filter#setFilter"
+            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+          >
+            Framework
+          </button>
+
+          <button
+            type="button"
+            data-filter="all"
+            data-backtrace-filter-target="button"
+            data-action="click->backtrace-filter#setFilter"
+            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+          >
+            All
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <%= render partial: "solid_errors/occurrences/backtrace_line", 
+            collection: backtrace.is_a?(Array) ? backtrace : backtrace.lines.first(20), 
+            as: :line %>
+      </div>
+    </div>
+  </div>
+</details>

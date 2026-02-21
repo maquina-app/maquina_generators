@@ -1,0 +1,124 @@
+<%# locals: (occurrences:, page:) %>
+
+<%= render "components/card" do %>
+  <div class="p-6 pb-2">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-medium text-foreground">Occurrences</h3>
+
+      <div class="flex items-center gap-4 text-sm text-muted-foreground">
+        <span>
+          <% if page.count.zero? %>
+            No occurrences found
+          <% elsif page.pages == 1 %>
+            <strong><%= page.count %></strong>
+            total
+          <% else %>
+            <strong><%= page.from %>-<%= page.to %></strong>
+            of
+            <strong><%= page.count %></strong>
+          <% end %>
+        </span>
+
+        <% if page.pages > 1 %>
+          <nav aria-label="Pages" class="flex items-center gap-1">
+            <% if (first_page = page.first) %>
+              <%= link_to url_for(params.to_unsafe_hash.merge(page: first_page)),
+                  class: "button inline-flex items-center justify-center w-8 h-8 p-0",
+                  aria_label: "First" do %>
+                &laquo;
+              <% end %>
+            <% else %>
+              <span
+                class="
+                  inline-flex items-center justify-center w-8 h-8
+                  text-muted-foreground
+                "
+              >
+                &laquo;
+              </span>
+            <% end %>
+
+            <% if (prev_page = page.prev) %>
+              <%= link_to url_for(params.to_unsafe_hash.merge(page: prev_page)),
+                  class: "button inline-flex items-center justify-center w-8 h-8 p-0",
+                  aria_label: "Previous" do %>
+                &lsaquo;
+              <% end %>
+            <% else %>
+              <span
+                class="
+                  inline-flex items-center justify-center w-8 h-8
+                  text-muted-foreground
+                "
+              >
+                &lsaquo;
+              </span>
+            <% end %>
+
+            <% if (next_page = page.next) %>
+              <%= link_to url_for(params.to_unsafe_hash.merge(page: next_page)),
+                  class: "button inline-flex items-center justify-center w-8 h-8 p-0",
+                  aria_label: "Next" do %>
+                &rsaquo;
+              <% end %>
+            <% else %>
+              <span
+                class="
+                  inline-flex items-center justify-center w-8 h-8
+                  text-muted-foreground
+                "
+              >
+                &rsaquo;
+              </span>
+            <% end %>
+
+            <% if (last_page = page.last) %>
+              <%= link_to url_for(params.to_unsafe_hash.merge(page: last_page)),
+                  class: "button inline-flex items-center justify-center w-8 h-8 p-0",
+                  aria_label: "Last" do %>
+                &raquo;
+              <% end %>
+            <% else %>
+              <span
+                class="
+                  inline-flex items-center justify-center w-8 h-8
+                  text-muted-foreground
+                "
+              >
+                &raquo;
+              </span>
+            <% end %>
+          </nav>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="divide-y divide-border">
+    <% if occurrences.any? %>
+      <%= render partial: "solid_errors/occurrences/occurrence",
+      collection: occurrences,
+      as: :occurrence %>
+    <% else %>
+      <div class="p-12 text-center">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide mx-auto text-muted-foreground mb-4"
+        >
+          <path d="M3 3h18v18H3z" />
+          <path d="m9 9 6 6" />
+        </svg>
+
+        <p class="text-sm text-muted-foreground">No occurrences yet</p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

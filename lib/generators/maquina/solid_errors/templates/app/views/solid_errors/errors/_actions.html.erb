@@ -1,0 +1,39 @@
+<%# locals: (error:) %>
+
+<%= render "components/card" do %>
+  <div class="p-6 pb-2">
+    <h3 class="text-lg font-medium">Actions</h3>
+  </div>
+
+  <div class="p-6 pt-0 space-y-3">
+    <%= link_to solid_errors.root_path, class: "button w-full justify-center" do %>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide"
+      >
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </svg>
+
+      <span>Back to Errors</span>
+    <% end %>
+
+    <% if error.resolved? %>
+      <%= render "solid_errors/errors/delete_button",
+      error: error,
+      class: "w-full justify-center" %>
+    <% else %>
+      <%= render "solid_errors/errors/resolve_button",
+      error: error,
+      class: "w-full justify-center" %>
+    <% end %>
+  </div>
+<% end %>

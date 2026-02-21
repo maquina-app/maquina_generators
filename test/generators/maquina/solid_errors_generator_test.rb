@@ -89,6 +89,31 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/backstage/solid_errors"}
   end
 
+  test "does not copy views by default" do
+    run_generator %w[--prefix /admin]
+
+    assert_no_file "app/views/solid_errors/errors/index.html.erb"
+    assert_no_file "app/views/solid_errors/errors/show.html.erb"
+  end
+
+  test "copies views with --copy-views" do
+    run_generator %w[--prefix /admin --copy-views]
+
+    assert_file "app/views/solid_errors/errors/index.html.erb"
+    assert_file "app/views/solid_errors/errors/show.html.erb"
+    assert_file "app/views/solid_errors/errors/_error_card.html.erb"
+    assert_file "app/views/solid_errors/errors/_delete_button.html.erb"
+    assert_file "app/views/solid_errors/errors/_resolve_button.html.erb"
+    assert_file "app/views/solid_errors/errors/_actions.html.erb"
+    assert_file "app/views/solid_errors/errors/show/_header.html.erb"
+    assert_file "app/views/solid_errors/errors/show/_properties.html.erb"
+    assert_file "app/views/solid_errors/errors/show/_actions.html.erb"
+    assert_file "app/views/solid_errors/errors/show/_error_details.html.erb"
+    assert_file "app/views/solid_errors/occurrences/_occurrence.html.erb"
+    assert_file "app/views/solid_errors/occurrences/_collection.html.erb"
+    assert_file "app/views/solid_errors/occurrences/_backtrace_line.html.erb"
+  end
+
   private
 
   def mkdir_p(path)
