@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+Rails.application.configure do
+  config.mission_control.jobs.base_controller_class = "BackstageController"
+
+  backstage = Rails.application.credentials.backstage || {}
+
+  MissionControl::Jobs.http_basic_auth_user = backstage[:username] || ENV.fetch("<%= options[:user_env_var] %>", nil)
+  MissionControl::Jobs.http_basic_auth_password = backstage[:password] || ENV.fetch("<%= options[:password_env_var] %>", nil)
+end

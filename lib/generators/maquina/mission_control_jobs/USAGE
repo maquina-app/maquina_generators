@@ -1,0 +1,14 @@
+Description:
+  Installs Mission Control Jobs with HTTP authentication and engine mounting.
+
+  Generates an initializer, adds routes, and creates a BackstageController.
+
+  Authentication tries Rails credentials (backstage.username/password)
+  first, then falls back to environment variables.
+
+Examples:
+  rails g maquina:mission_control_jobs --prefix /admin
+
+  rails g maquina:mission_control_jobs --prefix /backstage \
+    --user-env-var ADMIN_USER \
+    --password-env-var ADMIN_PASSWORD
