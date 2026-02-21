@@ -1,0 +1,15 @@
+Description:
+  Installs Solid Errors with HTTP authentication and engine mounting.
+
+  Generates an initializer, adds routes, creates a BackstageController,
+  and runs the solid_errors:install generator.
+
+  Authentication tries Rails credentials (backstage.username/password)
+  first, then falls back to environment variables.
+
+Examples:
+  rails g maquina:solid_errors --prefix /admin
+
+  rails g maquina:solid_errors --prefix /backstage \
+    --user-env-var ADMIN_USER \
+    --password-env-var ADMIN_PASSWORD

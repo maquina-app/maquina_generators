@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+Rails.application.configure do
+  config.solid_errors.connects_to = { database: { writing: :errors } }
+
+  backstage = Rails.application.credentials.backstage || {}
+
+  config.solid_errors.username = backstage[:username] || ENV.fetch("<%= options[:user_env_var] %>", nil)
+  config.solid_errors.password = backstage[:password] || ENV.fetch("<%= options[:password_env_var] %>", nil)
+end
