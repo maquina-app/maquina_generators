@@ -42,7 +42,8 @@ class Maquina::Generators::MissionControlJobsGeneratorTest < Rails::Generators::
     run_generator %w[--prefix /admin]
 
     assert_file "config/initializers/mission_control.rb" do |content|
-      assert_match(/base_controller_class = "BackstageController"/, content)
+      assert_match(/MissionControl::Jobs\.base_controller_class = "BackstageController"/, content)
+      assert_match(/MissionControl::Jobs\.adapters = \[:solid_queue\]/, content)
       assert_match(/credentials\.backstage/, content)
       assert_match(/ENV\.fetch\("MISSION_CONTROL_JOBS_USER"/, content)
       assert_match(/ENV\.fetch\("MISSION_CONTROL_JOBS_PASSWORD"/, content)

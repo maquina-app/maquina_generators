@@ -26,7 +26,9 @@ module Maquina
       def run_bundle_install
         return unless rails_app?
 
-        run "bundle install", capture: true
+        Bundler.with_unbundled_env do
+          system("bundle install", chdir: destination_root)
+        end
       end
 
       # 4. Post-install message

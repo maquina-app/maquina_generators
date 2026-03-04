@@ -59,23 +59,20 @@ module Maquina
       def run_bundle_install
         return unless rails_app?
 
-        run "bundle install", capture: true
+        Bundler.with_unbundled_env do
+          system("bundle install", chdir: destination_root)
+        end
       end
 
-      # 7. Run solid_errors:install
-      def run_gem_install
-        return unless rails_app?
-
-        run "bin/rails generate solid_errors:install", capture: true
-      end
-
-      # 8. Post-install message
+      # 7. Post-install message
       def show_post_install
         say ""
         say "Solid Errors has been installed!", :green
         say ""
         say "Next steps:", :yellow
-        say "  1. bin/rails db:migrate"
+        say "  1. bin/rails generate solid_errors:install"
+        say "     (when prompted to overwrite the initializer, choose 'n' to keep your config)"
+        say "  2. bin/rails db:migrate"
         say ""
         say "Configuration:", :yellow
         say "  - Set credentials: bin/rails credentials:edit"

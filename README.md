@@ -78,7 +78,7 @@ rails g maquina:solid_errors --prefix /admin
 rails g maquina:solid_errors --prefix /admin --copy-views   # Include custom views
 ```
 
-The generator automatically runs `bundle install` and `solid_errors:install`. After running, execute `bin/rails db:migrate`.
+The generator automatically runs `bundle install`. After running, execute `bin/rails generate solid_errors:install` (decline the initializer overwrite to keep your config), then `bin/rails db:migrate`.
 
 #### Options
 
