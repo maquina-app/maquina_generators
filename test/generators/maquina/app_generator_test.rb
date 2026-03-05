@@ -111,10 +111,10 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_file "Procfile.dev", /web: bin\/rails server -p 3100/
   end
 
-  test "creates overmind env file" do
+  test "creates Procfile.dev" do
     run_generator
 
-    assert_file ".overmind.env", /OVERMIND_PROCFILE=Procfile.dev/
+    assert_file "Procfile.dev"
   end
 
   test "creates rubocop config" do
@@ -226,7 +226,7 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
 
     assert_file "README.md" do |content|
       assert_match(/Getting Started/, content)
-      assert_match(/overmind start/, content)
+      assert_match(/bin\/dev/, content)
     end
   end
 

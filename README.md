@@ -241,7 +241,7 @@ Customize rules in `config/initializers/rack_attack.rb`.
 #### What it does
 
 1. Adds development, runtime, and production gems (brakeman, standard, rails-i18n, maquina_components, aws-sdk-s3, etc.)
-2. Creates `Procfile.dev` and `.overmind.env`
+2. Creates `Procfile.dev`
 3. Creates `.rubocop.yml`, `.standard.yml`, appends to `.gitignore`
 4. Creates `bin/setup` and `bin/ci` scripts
 5. Creates `config/initializers/generators.rb`
@@ -274,7 +274,7 @@ rails g maquina:app --auth registration
 bin/rails generate solid_errors:install   # decline initializer overwrite
 bin/rails db:migrate
 bin/rails credentials:edit                # set backstage username/password
-overmind start
+bin/dev
 ```
 
 ---

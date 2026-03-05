@@ -48,10 +48,9 @@ module Maquina
         end
       end
 
-      # 2. Create Procfile.dev and .overmind.env
+      # 2. Create Procfile.dev
       def create_procfile
         template "Procfile.dev.tt", "Procfile.dev"
-        copy_file ".overmind.env", ".overmind.env"
       end
 
       # 3. Config files
@@ -232,7 +231,7 @@ module Maquina
         say "     backstage:"
         say "       username: your_user"
         say "       password: your_password"
-        say "  4. Start the app: overmind start"
+        say "  4. Start the app: bin/dev"
         if options[:auth] != "none"
           say ""
           say "Authentication (#{options[:auth]}):", :yellow
