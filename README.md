@@ -60,6 +60,52 @@ All generated code lives in your app -- edit it directly:
 - **Email sender:** Edit `app/mailers/verification_mailer.rb`
 - **Translations:** Edit `config/locales/clave.*.yml`
 
+### Registration -- Password-Based Authentication with Accounts
+
+**Registration** generates a password-based authentication system with multi-tenant account support. It builds on top of the Rails 8 authentication generator, adding an Account model (tenant), user roles, and a registration flow.
+
+#### What it generates
+
+- **Runs Rails authentication generator** first (`bin/rails generate authentication`)
+- **Account model:** `Account` with `name` field and `has_many :users`
+- **Updated User model:** Adds `belongs_to :account`, `role` enum (admin/member), `name` field
+- **Updated Current model:** Adds `account` delegation through the user
+- **Registration controller:** Creates Account + User (admin role) together in a transaction
+- **Views:** Tailwind-styled registration form and updated login form with indigo color scheme
+- **Locale files:** English and Spanish translations
+- **Migrations:** `create_accounts` and `add_account_fields_to_users`
+
+#### Usage
+
+```bash
+rails g maquina:registration
+```
+
+Then:
+
+```bash
+rails db:migrate  # Run migrations
+```
+
+#### Options
+
+```bash
+rails g maquina:registration                # Full install
+rails g maquina:registration --skip-views   # Skip view templates
+```
+
+#### Customization
+
+All generated code lives in your app -- edit it directly:
+
+- **Account fields:** Edit `app/models/account.rb` to add more tenant fields
+- **User roles:** Edit `app/models/user.rb` to customize the role enum
+- **Registration flow:** Edit `app/controllers/registrations_controller.rb`
+- **Colors/styling:** Edit view templates (default: indigo)
+- **Translations:** Edit `config/locales/registration.*.yml`
+
+---
+
 ### Solid Errors -- Error Tracking Dashboard
 
 **Solid Errors** installs the [solid_errors](https://github.com/fractaledmind/solid_errors) gem with HTTP authentication and engine mounting.
@@ -133,6 +179,34 @@ Credentials are resolved in order:
 
 ---
 
+### Solid Queue -- Background Job Processing
+
+**Solid Queue** installs the [solid_queue](https://github.com/rails/solid_queue) gem as the Active Job backend with configuration and Procfile.dev integration.
+
+#### What it generates
+
+- **Config:** `config/solid_queue.yml` with default dispatcher/worker settings
+- **Application config:** Sets `config.active_job.queue_adapter = :solid_queue` (skipped in test environment)
+- **Procfile.dev:** Appends `solid_queue: bin/rails solid_queue:start`
+- **Migrations:** Runs `solid_queue:install:migrations`
+
+#### Usage
+
+```bash
+rails g maquina:solid_queue
+```
+
+The generator automatically runs `bundle install` and installs migrations.
+
+#### Options
+
+```bash
+rails g maquina:solid_queue                      # Default (sqlite3)
+rails g maquina:solid_queue --database postgresql # PostgreSQL
+```
+
+---
+
 ### Rack Attack -- Request Protection
 
 **Rack Attack** installs the [rack-attack](https://github.com/rack/rack-attack) gem with default security rules to block common vulnerability scans and throttle abusive requests.
@@ -157,6 +231,51 @@ The generator automatically runs `bundle install`.
 - **Responses:** 403 Forbidden for blocklisted, 429 Too Many Requests for throttled
 
 Customize rules in `config/initializers/rack_attack.rb`.
+
+---
+
+### App -- Full Application Setup (Orchestrator)
+
+**App** is a meta-generator that sets up a complete Rails application in one command. Run it after `rails new myapp --css tailwind`.
+
+#### What it does
+
+1. Adds development, runtime, and production gems (brakeman, standard, rails-i18n, maquina_components, aws-sdk-s3, etc.)
+2. Creates `Procfile.dev` and `.overmind.env`
+3. Creates `.rubocop.yml`, `.standard.yml`, appends to `.gitignore`
+4. Creates `bin/setup` and `bin/ci` scripts
+5. Creates `config/initializers/generators.rb`
+6. Configures development (letter_opener) and production (APPLICATION_HOST) environments
+7. Configures `field_error_proc` in application
+8. Installs Action Text and Active Storage
+9. Sets up ActiveStorage JavaScript imports
+10. Adds turbo morphing and `yield :head` to layout
+11. Invokes sub-generators: `maquina:rack_attack`, `maquina:solid_queue`, `maquina:mission_control_jobs`, `maquina:solid_errors`, `maquina_components:install`
+12. Creates a HomeController with root route
+13. Generates a README and `database.yml.example`
+
+#### Usage
+
+```bash
+rails g maquina:app
+rails g maquina:app --prefix /backstage --port 3100
+rails g maquina:app --auth registration
+```
+
+#### Options
+
+- `--prefix` (default: `/admin`) -- Base path prefix for backstage tools (Solid Errors, Mission Control Jobs)
+- `--port` (default: `3000`) -- Default port for the development server
+- `--auth` (default: `none`) -- Authentication type: `none`, `clave`, or `registration`
+
+#### After running
+
+```bash
+bin/rails generate solid_errors:install   # decline initializer overwrite
+bin/rails db:migrate
+bin/rails credentials:edit                # set backstage username/password
+overmind start
+```
 
 ---
 

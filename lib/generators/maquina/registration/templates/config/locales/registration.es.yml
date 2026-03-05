@@ -1,0 +1,43 @@
+es:
+  registrations:
+    new:
+      title: "Crear cuenta"
+      account_name: "Nombre de la cuenta"
+      account_name_placeholder: "Tu empresa o equipo"
+      name: "Tu nombre"
+      name_placeholder: "Maria Lopez"
+      email: "Correo electronico"
+      email_placeholder: "tu@correo.com"
+      password: "Contrasena"
+      password_placeholder: "Al menos 8 caracteres"
+      password_confirmation: "Confirmar contrasena"
+      password_confirmation_placeholder: "Repite tu contrasena"
+      submit: "Registrarse"
+      have_account: "Ya tienes cuenta?"
+      sign_in: "Inicia sesion"
+    create:
+      success: "Tu cuenta ha sido creada. Bienvenido!"
+      rate_limited: "Demasiados intentos. Por favor, espera unos minutos e intenta de nuevo."
+
+  sessions:
+    new:
+      title: "Iniciar sesion"
+      email: "Correo electronico"
+      email_placeholder: "tu@correo.com"
+      password: "Contrasena"
+      password_placeholder: "Ingresa tu contrasena"
+      submit: "Iniciar sesion"
+      forgot_password: "Olvidaste tu contrasena?"
+      sign_up: "Registrate"
+
+  activerecord:
+    models:
+      account:
+        one: "Cuenta"
+        other: "Cuentas"
+    attributes:
+      account:
+        name: "Nombre"
+      user:
+        name: "Nombre"
+        role: "Rol"

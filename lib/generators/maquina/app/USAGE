@@ -1,0 +1,11 @@
+Description:
+  Sets up a complete Rails application with standard development tools,
+  Solid Queue, Mission Control Jobs, Solid Errors, Rack Attack, and
+  maquina_components.
+
+  Run this after `rails new myapp --css tailwind`.
+
+Examples:
+  rails g maquina:app
+
+  rails g maquina:app --prefix /backstage --port 3100

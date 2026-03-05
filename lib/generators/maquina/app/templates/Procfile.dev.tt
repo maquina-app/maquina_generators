@@ -1,0 +1,2 @@
+web: bin/rails server -p <%= options[:port] %>
+css: bin/rails tailwindcss:watch

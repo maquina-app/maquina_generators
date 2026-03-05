@@ -1,0 +1,37 @@
+class RegistrationsController < ApplicationController
+  allow_unauthenticated_access
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_registration_path, alert: t("registrations.create.rate_limited") }
+
+  def new
+    @user = User.new
+  end
+
+  def create
+    account = nil
+    user = nil
+
+    ActiveRecord::Base.transaction do
+      account = Account.create!(name: registration_params[:account_name])
+      user = account.users.create!(
+        name: registration_params[:name],
+        email_address: registration_params[:email_address],
+        password: registration_params[:password],
+        password_confirmation: registration_params[:password_confirmation],
+        role: :admin
+      )
+    end
+
+    start_new_session_for user
+    redirect_to root_path, notice: t("registrations.create.success")
+  rescue ActiveRecord::RecordInvalid
+    @user = User.new(registration_params.except(:password, :password_confirmation, :account_name))
+    @account_name = registration_params[:account_name]
+    render :new, status: :unprocessable_entity
+  end
+
+  private
+
+  def registration_params
+    params.permit(:name, :email_address, :password, :password_confirmation, :account_name)
+  end
+end

@@ -1,0 +1,10 @@
+Description:
+  Generates password-based authentication with account registration.
+
+  Runs the Rails authentication generator first, then adds an Account model
+  (tenant), updates the User model with account association and roles, and
+  creates a registration controller with Tailwind-styled views.
+
+Examples:
+  rails g maquina:registration                # Full install
+  rails g maquina:registration --skip-views   # No view templates (API-only or custom views)

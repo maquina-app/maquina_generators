@@ -1,0 +1,32 @@
+# <%= File.basename(destination_root).titleize %>
+
+## Getting Started
+
+```bash
+bin/setup
+overmind start
+```
+
+## Development
+
+- **Server:** http://localhost:<%= options[:port] %>
+- **Jobs dashboard:** http://localhost:<%= options[:port] %><%= options[:prefix] %>/mission_control_jobs
+- **Errors dashboard:** http://localhost:<%= options[:port] %><%= options[:prefix] %>/solid_errors
+
+## Scripts
+
+- `bin/setup` — Install dependencies and prepare database
+- `bin/ci` — Run full CI suite (lint, security, tests)
+- `overmind start` — Start all processes (web, css, solid_queue)
+
+## Credentials
+
+```bash
+bin/rails credentials:edit
+```
+
+```yaml
+backstage:
+  username: your_user
+  password: your_password
+```
