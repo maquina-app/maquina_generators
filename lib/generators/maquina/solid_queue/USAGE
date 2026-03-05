@@ -1,0 +1,11 @@
+Description:
+  Installs Solid Queue as the Active Job backend with configuration
+  and Procfile.dev integration.
+
+  Adds the gem, creates a config file, configures the application
+  to use Solid Queue, and updates Procfile.dev.
+
+Examples:
+  rails g maquina:solid_queue
+
+  rails g maquina:solid_queue --database postgresql
