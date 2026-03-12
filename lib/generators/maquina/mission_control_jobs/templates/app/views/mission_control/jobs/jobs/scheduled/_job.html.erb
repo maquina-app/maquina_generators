@@ -1,0 +1,17 @@
+<%= render "components/table/cell" do %>
+  <%= link_to job.queue_name, application_queue_path(@application, job.queue),
+      class: "text-sm text-primary hover:underline" %>
+<% end %>
+<%= render "components/table/cell" do %>
+  <div class="flex items-center gap-2">
+    <span class="text-sm text-muted-foreground">
+      <%= bidirectional_time_distance_in_words_with_title(job.scheduled_at) %>
+    </span>
+    <% if job_delayed?(job) %>
+      <%= render "components/badge", variant: :destructive, size: :sm do %>delayed<% end %>
+    <% end %>
+  </div>
+<% end %>
+<%= render "components/table/cell", css_classes: "text-right" do %>
+  <%= render "mission_control/jobs/jobs/scheduled/actions", job: job %>
+<% end %>

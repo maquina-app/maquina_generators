@@ -1,0 +1,17 @@
+<%= render "components/table/cell" do %>
+  <%= link_to job.queue_name, application_queue_path(@application, job.queue),
+      class: "text-sm text-primary hover:underline" %>
+<% end %>
+<%= render "components/table/cell" do %>
+  <% if job.worker_id %>
+    <%= link_to "worker #{job.worker_id}", application_worker_path(@application, job.worker_id),
+        class: "text-sm text-primary hover:underline" %>
+  <% else %>
+    <span class="text-sm text-muted-foreground">&mdash;</span>
+  <% end %>
+<% end %>
+<%= render "components/table/cell" do %>
+  <span class="text-sm text-muted-foreground">
+    <%= job.started_at ? time_distance_in_words_with_title(job.started_at) : "(Finished)" %>
+  </span>
+<% end %>

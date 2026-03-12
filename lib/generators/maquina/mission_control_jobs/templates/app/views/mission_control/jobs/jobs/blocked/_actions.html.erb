@@ -1,0 +1,5 @@
+<div class="flex items-center gap-2 justify-end">
+  <%= button_to "Run now",
+      application_job_dispatch_path(@application, job.job_id),
+      data: { component: "button", variant: "secondary", size: "sm" } %>
+</div>

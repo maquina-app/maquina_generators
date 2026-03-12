@@ -1,0 +1,12 @@
+<%= render "components/table" do %>
+  <%= render "components/table/header" do %>
+    <%= render "components/table/row" do %>
+      <%= render "components/table/head" do %>Job<% end %>
+      <%= render "components/table/head" do %>Arguments<% end %>
+      <%= render "components/table/head" do %>Status<% end %>
+    <% end %>
+  <% end %>
+  <%= render "components/table/body" do %>
+    <%= render partial: "mission_control/jobs/shared/job", collection: jobs %>
+  <% end %>
+<% end %>

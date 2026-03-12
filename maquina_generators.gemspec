@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = spec.homepage
 
   spec.files = Dir.chdir(__dir__) do
-    Dir["{lib,test}/**/*", "LICENSE.txt", "README.md", "Rakefile"]
+    Dir["{lib,test}/**/*", "{lib,test}/**/.*", "LICENSE.txt", "README.md", "Rakefile"]
   end
 
   spec.require_paths = ["lib"]

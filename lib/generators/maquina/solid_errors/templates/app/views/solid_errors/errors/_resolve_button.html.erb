@@ -1,23 +1,11 @@
 <%# locals: (error:) %>
 
-<%= button_to solid_errors.error_path(error), 
+<%= button_to solid_errors.error_path(error),
     method: :patch,
     params: { error: { resolved_at: Time.now } },
-    class: "button button-primary w-full justify-center inline-flex items-center gap-2 py-2 px-4 transition-all hover:scale-[1.02] active:scale-95" do %>
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    class="lucide"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
+    form: { data: { turbo_confirm: "Are you sure you want to resolve this error?" } },
+    data: { component: "button", variant: "primary" },
+    class: "w-full justify-center" do %>
+  <%= icon_for(:check_circle, class: "size-4") %>
   <span>Resolve Error</span>
 <% end %>

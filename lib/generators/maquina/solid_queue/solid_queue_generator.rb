@@ -7,6 +7,8 @@ module Maquina
 
       class_option :database, type: :string, default: "sqlite3",
         desc: "Database adapter (sqlite3 uses a separate queue database)"
+      class_option :quiet, type: :boolean, default: false,
+        desc: "Suppress post-install instructions"
 
       # 1. Add gem to Gemfile
       def add_gem
@@ -38,6 +40,7 @@ module Maquina
 
             # Use Solid Queue as the Active Job backend in all environments except test
             config.active_job.queue_adapter = :solid_queue unless Rails.env.test?
+            config.solid_queue.connects_to = {database: {writing: :queue}}
           RUBY
         end
       end
@@ -67,12 +70,14 @@ module Maquina
         return unless rails_app?
 
         Bundler.with_unbundled_env do
-          system("bin/rails solid_queue:install:migrations", chdir: destination_root)
+          system("bin/rails solid_queue:install", chdir: destination_root)
         end
       end
 
       # 7. Post-install message
       def show_post_install
+        return if options[:quiet]
+
         say ""
         say "Solid Queue has been installed!", :green
         say ""

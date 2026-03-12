@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Admin - Errors</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <%= yield :head %>
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <%= render "layouts/admin_navigation" %>
+    <%= render "components/toaster" %>
+    <%= toast_flash_messages %>
+    <main class="pt-4 pb-8">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <%= yield %>
+      </div>
+    </main>
+  </body>
+</html>

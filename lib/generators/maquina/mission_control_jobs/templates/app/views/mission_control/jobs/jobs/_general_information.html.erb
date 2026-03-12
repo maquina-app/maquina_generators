@@ -1,0 +1,83 @@
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "General Information" %>
+  <% end %>
+
+  <%= render "components/card/content" do %>
+    <div class="space-y-4">
+      <div>
+        <span class="text-sm text-muted-foreground">Arguments</span>
+        <div class="mt-1 text-sm font-mono text-foreground break-words"><%= job_arguments(job) %></div>
+      </div>
+
+      <div>
+        <span class="text-sm text-muted-foreground">Job ID</span>
+        <p class="text-sm font-mono text-foreground mt-1"><%= job.job_id %></p>
+      </div>
+
+      <div>
+        <span class="text-sm text-muted-foreground">Queue</span>
+        <div class="mt-1">
+          <%= render "components/badge", variant: :outline, size: :sm do %>
+            <%= link_to job.queue_name, application_queue_path(@application, job.queue),
+                class: "text-foreground hover:text-primary transition-colors" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div>
+        <span class="text-sm text-muted-foreground">Enqueued</span>
+        <p class="text-sm text-foreground mt-1">
+          <%= time_distance_in_words_with_title(job.enqueued_at.to_datetime) %> ago
+        </p>
+      </div>
+
+      <% if job.scheduled? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Scheduled</span>
+          <div class="flex items-center gap-2 mt-1">
+            <p class="text-sm text-foreground">
+              <%= bidirectional_time_distance_in_words_with_title(job.scheduled_at) %>
+            </p>
+            <% if job_delayed?(job) %>
+              <%= render "components/badge", variant: :destructive, size: :sm do %>delayed<% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if job.failed? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Failed</span>
+          <p class="text-sm text-foreground mt-1">
+            <%= time_distance_in_words_with_title(job.failed_at) %> ago
+          </p>
+        </div>
+      <% end %>
+
+      <% if job.finished_at.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Finished</span>
+          <p class="text-sm text-foreground mt-1">
+            <%= time_distance_in_words_with_title(job.finished_at) %> ago
+          </p>
+        </div>
+
+        <div>
+          <span class="text-sm text-muted-foreground">Duration</span>
+          <p class="text-sm font-mono text-foreground mt-1"><%= job.duration.round(3) %> seconds</p>
+        </div>
+      <% end %>
+
+      <% if job.worker_id.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Processed by</span>
+          <p class="text-sm text-foreground mt-1">
+            <%= link_to "worker #{job.worker_id}", application_worker_path(@application, job.worker_id),
+                class: "text-primary hover:underline" %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

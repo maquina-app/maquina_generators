@@ -68,12 +68,12 @@ class Maquina::Generators::RegistrationGeneratorTest < Rails::Generators::TestCa
     assert_file "app/views/registrations/new.html.erb" do |content|
       assert_match(/account_name/, content)
       assert_match(/password_confirmation/, content)
-      assert_match(/indigo/, content)
+      assert_match(/bg-primary/, content)
     end
 
     assert_file "app/views/sessions/new.html.erb" do |content|
       assert_match(/password/, content)
-      assert_match(/indigo/, content)
+      assert_match(/bg-primary/, content)
       assert_match(/forgot_password/, content)
     end
   end
@@ -91,6 +91,12 @@ class Maquina::Generators::RegistrationGeneratorTest < Rails::Generators::TestCa
     run_generator
 
     assert_file "config/routes.rb", /resources :registrations, only: \[:new, :create\]/
+  end
+
+  test "enables bcrypt" do
+    run_generator
+
+    assert_file "Gemfile", /gem "bcrypt"/
   end
 
   test "generates migrations" do
@@ -118,15 +124,15 @@ class Maquina::Generators::RegistrationGeneratorTest < Rails::Generators::TestCa
     assert_file "app/models/user.rb"
   end
 
-  test "views use indigo color scheme" do
+  test "views use design system CSS variables" do
     run_generator
 
     assert_file "app/views/registrations/new.html.erb" do |content|
-      assert_match(/indigo/, content)
+      assert_match(/bg-primary/, content)
     end
 
     assert_file "app/views/sessions/new.html.erb" do |content|
-      assert_match(/indigo/, content)
+      assert_match(/bg-primary/, content)
     end
   end
 

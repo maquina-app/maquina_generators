@@ -1,0 +1,27 @@
+<% navigation(title: "Recurring tasks", section: :recurring_tasks) %>
+
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Recurring Tasks" %>
+  <% end %>
+
+  <%= render "components/card/content", spacing: :full do %>
+    <%= render "components/table" do %>
+      <%= render "components/table/header" do %>
+        <%= render "components/table/row" do %>
+          <%= render "components/table/head" do %>ID<% end %>
+          <%= render "components/table/head" do %>Job<% end %>
+          <%= render "components/table/head" do %>Schedule<% end %>
+          <%= render "components/table/head" do %>Last enqueued<% end %>
+          <%= render "components/table/head" do %>Next<% end %>
+          <%= render "components/table/head", css_classes: "w-10" do %>
+            <span class="sr-only">Actions</span>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= render "components/table/body" do %>
+        <%= render partial: "mission_control/jobs/recurring_tasks/recurring_task", collection: @recurring_tasks %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

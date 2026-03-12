@@ -1,32 +1,98 @@
 # <%= File.basename(destination_root).titleize %>
 
+Built with [maquina.app](https://maquina.app) — production-tested tools for developers who ship alone.
+
 ## Getting Started
 
+### Prerequisites
+
+- Ruby 3.2+
+- Rails 8+
+- PostgreSQL (or SQLite for development)
+
+### Setup
+
 ```bash
-bin/setup
-bin/dev
+bin/setup    # Install dependencies and prepare databases
+bin/dev      # Start all processes (web, css, solid_queue)
 ```
 
-## Development
+Your app will be running at **http://localhost:<%= options[:port] %>**.
 
-- **Server:** http://localhost:<%= options[:port] %>
-- **Jobs dashboard:** http://localhost:<%= options[:port] %><%= options[:prefix] %>/mission_control_jobs
-- **Errors dashboard:** http://localhost:<%= options[:port] %><%= options[:prefix] %>/solid_errors
+## What's Included
+
+| Feature | Description |
+|---------|-------------|
+<% if options[:auth] != "none" -%>
+| **Authentication** | <%= options[:auth] == "clave" ? "Clave passwordless email-code authentication" : "Registration-based email/password authentication" %> |
+<% end -%>
+| **Background Jobs** | Solid Queue with Mission Control Jobs dashboard |
+| **Error Tracking** | Solid Errors with custom UI |
+| **Rate Limiting** | Rack::Attack with sensible defaults |
+| **UI Components** | Maquina Components (ERB partials + Tailwind + Stimulus) |
+| **Caching** | Solid Cache |
+| **WebSockets** | Solid Cable |
+| **Rich Text** | Action Text |
+| **File Storage** | Active Storage (S3-ready in production) |
+| **Multi-database** | Separate databases for queue, cache, cable, and errors |
+
+## Development URLs
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:<%= options[:port] %> | Application |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %>/mission_control_jobs | Jobs dashboard |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %>/solid_errors | Errors dashboard |
+<% if options[:auth] != "none" -%>
+| http://localhost:<%= options[:port] %>/session/new | Sign in |
+<% if options[:auth] == "registration" -%>
+| http://localhost:<%= options[:port] %>/registrations/new | Sign up |
+<% elsif options[:auth] == "clave" -%>
+| http://localhost:<%= options[:port] %>/registration/new | Sign up |
+<% end -%>
+<% end -%>
 
 ## Scripts
 
-- `bin/setup` — Install dependencies and prepare database
-- `bin/ci` — Run full CI suite (lint, security, tests)
+- `bin/setup` — Install dependencies and prepare databases
 - `bin/dev` — Start all processes (web, css, solid_queue)
 
 ## Credentials
 
+Edit credentials with:
+
 ```bash
 bin/rails credentials:edit
 ```
+
+Add backstage credentials for the jobs and errors dashboards:
 
 ```yaml
 backstage:
   username: your_user
   password: your_password
 ```
+
+## Maquina Ecosystem
+
+### UI Components
+
+[Maquina Components](https://maquina.app/documentation/components/) — a library of ERB partials, Tailwind CSS styles, and Stimulus controllers for building consistent, accessible UIs in Rails.
+
+### AI Tools
+
+Maquina provides a suite of AI-powered tools to accelerate your Rails development:
+
+- **Rails MCP Server** — Model Context Protocol server for Rails applications
+- **Rails Simplifier** — simplify and refine Rails code following 37signals patterns
+- **Rails Upgrade Assistant** — comprehensive Rails upgrade reports and migration guides
+- **Maquina UI Standards** — build consistent UIs using maquina_components
+- **Neovim MCP Server** — MCP server for Neovim integration
+
+Learn more at [maquina.app/documentation/ai-tools](https://maquina.app/documentation/ai-tools/).
+
+## Learn More
+
+Visit [maquina.app](https://maquina.app) for full documentation.
+
+Maquina is built for the one-person framework philosophy: production-first, standard Rails, designed to scale with a small team.

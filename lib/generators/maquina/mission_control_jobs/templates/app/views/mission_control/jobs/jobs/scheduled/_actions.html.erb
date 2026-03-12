@@ -1,0 +1,9 @@
+<div class="flex items-center gap-2 justify-end">
+  <%= button_to "Run now",
+      application_job_dispatch_path(@application, job.job_id),
+      data: { component: "button", variant: "secondary", size: "sm" } %>
+  <%= button_to "Discard",
+      application_job_discard_path(@application, job.job_id),
+      data: { component: "button", variant: "destructive", size: "sm" },
+      form: { data: { turbo_confirm: "This will delete the job and can't be undone. Are you sure?" } } %>
+</div>

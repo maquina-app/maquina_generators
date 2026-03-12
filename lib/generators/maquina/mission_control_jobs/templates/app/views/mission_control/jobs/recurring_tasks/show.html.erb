@@ -1,0 +1,51 @@
+<% navigation(title: @recurring_task.id, section: :recurring_tasks) %>
+
+<div class="py-8">
+  <%# Header %>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-foreground">Recurring Task Details</h1>
+      <p class="mt-1 text-sm text-muted-foreground"><%= @recurring_task.id %></p>
+    </div>
+    <div>
+      <%= link_to application_recurring_tasks_path(@application),
+          class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
+        <%= icon_for(:arrow_left, class: "size-4") %>
+        Back to Recurring Tasks
+      <% end %>
+    </div>
+  </div>
+
+  <%# Title with action %>
+  <%= render "mission_control/jobs/recurring_tasks/title", recurring_task: @recurring_task %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <div class="lg:col-span-2 space-y-6">
+      <%# Jobs list %>
+      <% if @jobs_page.empty? %>
+        <%= empty_state(
+          title: "No jobs found",
+          description: "No jobs have been enqueued for this recurring task yet.",
+          icon: :clock,
+          size: :compact
+        ) %>
+      <% else %>
+        <%= render "components/card" do %>
+          <%= render "components/card/header" do %>
+            <%= render "components/card/title", text: "#{pluralize(@recurring_task.jobs.count, 'job')}" %>
+          <% end %>
+          <%= render "components/card/content", spacing: :full do %>
+            <%= render "mission_control/jobs/shared/jobs", jobs: @jobs_page.records %>
+          <% end %>
+        <% end %>
+
+        <%= render "mission_control/jobs/shared/pagination_toolbar", page: @jobs_page, filter_param: jobs_filter_param %>
+      <% end %>
+    </div>
+
+    <div class="space-y-6">
+      <%# General information %>
+      <%= render "mission_control/jobs/recurring_tasks/general_information", recurring_task: @recurring_task %>
+    </div>
+  </div>
+</div>

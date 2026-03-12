@@ -1,0 +1,19 @@
+<%= render "components/table/row" do %>
+  <%= render "components/table/cell" do %>
+    <div class="flex items-center gap-2">
+      <%= link_to queue.name, application_queue_path(@application, queue),
+          class: "font-medium text-foreground hover:text-primary transition-colors" %>
+      <% if queue.paused? %>
+        <%= render "components/badge", variant: :warning, size: :sm do %>Paused<% end %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm text-muted-foreground"><%= queue.size %></span>
+  <% end %>
+  <%= render "components/table/cell", css_classes: "text-right" do %>
+    <% if queue_pausing_supported? %>
+      <%= render "mission_control/jobs/queues/actions", queue: queue %>
+    <% end %>
+  <% end %>
+<% end %>

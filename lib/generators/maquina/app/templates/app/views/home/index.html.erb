@@ -1,4 +1,268 @@
-<div class="max-w-2xl mx-auto py-16 px-4 text-center">
-  <h1 class="text-4xl font-bold text-gray-900 mb-4">Welcome</h1>
-  <p class="text-lg text-gray-600">Your application is running.</p>
+<%# Hero / Header %>
+<section class="bg-primary/5 border-b border-border">
+  <div class="max-w-5xl mx-auto px-5 py-20 sm:py-28">
+    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-5">
+      Tools for Rails developers<br class="hidden sm:block"> who ship alone
+    </h1>
+    <p class="text-lg text-muted-foreground leading-relaxed max-w-2xl mb-8">
+      Maquina is a growing collection of open-source tools extracted from production Rails applications.
+      UI components, background jobs, error tracking, and authentication — configured and ready to go.
+    </p>
+
+<% if options[:auth] != "none" %>
+    <%% if authenticated? %>
+      <div class="flex items-center gap-4 flex-wrap">
+        <p class="text-sm text-muted-foreground">
+          Signed in as <span class="font-medium text-foreground"><%%= Current.user.email_address %></span>
+        </p>
+        <%%= button_to t(".sign_out", default: "Sign Out"), session_path, method: :delete, data: { component: "button", variant: "outline", size: "sm" } %>
+      </div>
+    <%% else %>
+      <div class="flex items-center gap-3">
+        <%%= link_to "Sign In", new_session_path, data: { component: "button", variant: "primary" } %>
+        <%%= link_to "Register", new_registration_path, data: { component: "button", variant: "outline" } %>
+      </div>
+    <%% end %>
+<% end %>
+  </div>
+</section>
+
+<% if options[:auth] != "none" %>
+<%# Admin Tools (authenticated only) %>
+<%% if authenticated? %>
+  <section class="max-w-5xl mx-auto px-5 py-12">
+    <p class="text-sm font-semibold uppercase tracking-wider text-primary mb-4">Admin Tools</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <%%= render "components/card" do %>
+        <%%= render "components/card/header" do %>
+          <div class="flex items-center gap-2">
+            <%%= icon_for(:activity, class: "size-5 text-primary") %>
+            <%%= render "components/card/title", text: "Solid Errors" %>
+          </div>
+          <%%= render "components/card/description", text: "Browse, resolve, and clean up application exceptions in real time." %>
+        <%% end %>
+        <%%= render "components/card/footer" do %>
+          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/solid_errors", data: { component: "button", variant: "outline", size: "sm" } %>
+        <%% end %>
+      <%% end %>
+
+      <%%= render "components/card" do %>
+        <%%= render "components/card/header" do %>
+          <div class="flex items-center gap-2">
+            <%%= icon_for(:clock, class: "size-5 text-primary") %>
+            <%%= render "components/card/title", text: "Mission Control Jobs" %>
+          </div>
+          <%%= render "components/card/description", text: "Monitor queues, retry failed jobs, and manage background processing." %>
+        <%% end %>
+        <%%= render "components/card/footer" do %>
+          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/mission_control_jobs", data: { component: "button", variant: "outline", size: "sm" } %>
+        <%% end %>
+      <%% end %>
+    </div>
+  </section>
+
+  <div class="max-w-5xl mx-auto px-5">
+    <%%= render "components/separator" %>
+  </div>
+<%% end %>
+<% end %>
+
+<%# What Maquina Generators Provides %>
+<section class="max-w-5xl mx-auto px-5 py-12">
+  <p class="text-sm font-semibold uppercase tracking-wider text-primary mb-6">What's Included</p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+<% if options[:auth] != "none" %>
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <div class="flex items-center justify-between">
+          <%%= render "components/card/title", text: "Authentication" %>
+          <%%= render "components/badge", variant: :primary, size: :sm do %>Built in<%% end %>
+        </div>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Email-code based sign in with session management. Rate-limited login attempts out of the box.</p>
+      <%% end %>
+    <%% end %>
+<% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Background Jobs" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Solid Queue backed by SQLite. Includes Mission Control dashboard for monitoring and managing jobs.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Error Tracking" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Solid Errors captures exceptions automatically. Browse, resolve, and clean up — no external service needed.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Rate Limiting" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Rack::Attack configured with blocklists and throttles. Protect login, registration, and API endpoints.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Caching" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Solid Cache with SQLite backend. No Redis or Memcached to manage.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Real-time" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Solid Cable for WebSocket support. Action Cable backed by SQLite — zero external dependencies.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "UI Components" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">maquina_components — ERB partials styled with Tailwind CSS and Stimulus controllers. No React, no build step.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Standard Rails" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Importmaps, Turbo, Stimulus. No webpack, no bundler, no extra frameworks to learn.</p>
+      <%% end %>
+    <%% end %>
+
+  </div>
+</section>
+
+<%# Maquina Components Showcase %>
+<section class="max-w-5xl mx-auto px-5 pb-12">
+  <%%= render "components/card" do %>
+    <%%= render "components/card/header" do %>
+      <%%= render "components/card/title", text: "Maquina Components" %>
+      <%%= render "components/card/description", text: "UI components for Rails — ERB partials styled with Tailwind CSS 4.0 and Stimulus controllers. Inspired by shadcn/ui, built for the Rails way." %>
+    <%% end %>
+    <%%= render "components/card/content" do %>
+      <div class="flex flex-wrap gap-2">
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Card<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Badge<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Table<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Sidebar<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Calendar<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Combobox<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Date Picker<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Toast<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Dropdown Menu<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Toggle Group<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Pagination<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Breadcrumbs<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Alert<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Empty State<%% end %>
+        <%%= render "components/badge", variant: :outline, size: :sm do %>Forms<%% end %>
+      </div>
+    <%% end %>
+    <%%= render "components/card/footer" do %>
+      <%%= link_to "Browse Components", "https://maquina.app/documentation/components/", target: "_blank", rel: "noopener noreferrer", data: { component: "button", variant: "primary" } %>
+    <%% end %>
+  <%% end %>
+</section>
+
+<div class="max-w-5xl mx-auto px-5">
+  <%%= render "components/separator" %>
 </div>
+
+<%# AI Tools & Ecosystem %>
+<section class="max-w-5xl mx-auto px-5 py-12">
+  <p class="text-sm font-semibold uppercase tracking-wider text-primary mb-6">Ecosystem</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Rails MCP Server" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">A Model Context Protocol server for Rails projects. Analyze models, routes, schemas, and execute read-only Ruby code in your Rails context.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Neovim MCP Server" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">MCP server for Neovim integration. Read and update buffers, coordinate file changes across your editor and AI assistants.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Rails Upgrade Assistant" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">A Claude Skill that analyzes Rails applications and generates upgrade guides. Covers Rails 7.0 through 8.1 with breaking changes and migration steps.</p>
+      <%% end %>
+    <%% end %>
+
+    <%%= render "components/card" do %>
+      <%%= render "components/card/header" do %>
+        <%%= render "components/card/title", text: "Rails Simplifier" %>
+      <%% end %>
+      <%%= render "components/card/content" do %>
+        <p class="text-sm text-muted-foreground">Code simplification following 37signals patterns and the One Person Framework philosophy.</p>
+      <%% end %>
+    <%% end %>
+
+  </div>
+  <div class="mt-6 text-center">
+    <%%= link_to "Explore All Tools", "https://maquina.app/", target: "_blank", rel: "noopener noreferrer", data: { component: "button", variant: "outline" } %>
+  </div>
+</section>
+
+<div class="max-w-5xl mx-auto px-5">
+  <%%= render "components/separator" %>
+</div>
+
+<%# Philosophy %>
+<section class="max-w-5xl mx-auto px-5 py-12">
+  <p class="text-sm font-semibold uppercase tracking-wider text-primary mb-8 text-center">Philosophy</p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-10">
+    <div>
+      <h3 class="font-bold text-lg text-foreground mb-2">Production First</h3>
+      <p class="text-sm text-muted-foreground leading-relaxed">Every tool starts in a real application. No theoretical exercises — only code that has shipped.</p>
+    </div>
+    <div>
+      <h3 class="font-bold text-lg text-foreground mb-2">Standard Rails</h3>
+      <p class="text-sm text-muted-foreground leading-relaxed">ERB, Tailwind, Stimulus. No new paradigms to learn, no complex build pipelines.</p>
+    </div>
+    <div>
+      <h3 class="font-bold text-lg text-foreground mb-2">One Person Scale</h3>
+      <p class="text-sm text-muted-foreground leading-relaxed">Built for developers who ship alone. Simple tools that stay out of your way.</p>
+    </div>
+  </div>
+</section>
+
+<%# Footer CTA %>
+<section class="bg-primary/5 border-t border-border">
+  <div class="max-w-5xl mx-auto px-5 py-16 text-center">
+    <h2 class="text-2xl font-bold text-foreground mb-4">Start building today</h2>
+    <p class="text-muted-foreground mb-6">Visit maquina.app to explore the full ecosystem.</p>
+    <%%= link_to "Visit maquina.app", "https://maquina.app/", target: "_blank", rel: "noopener noreferrer", data: { component: "button", variant: "primary" } %>
+  </div>
+</section>

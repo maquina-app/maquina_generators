@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+SolidErrors.base_controller_class = "BackstageController"
+
 Rails.application.configure do
   config.solid_errors.connects_to = {database: {writing: :errors}}
 

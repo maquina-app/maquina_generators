@@ -1,0 +1,14 @@
+<div class="flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <h2 class="text-lg font-semibold text-foreground"><%= queue.name %></h2>
+    <% if queue.paused? %>
+      <%= render "components/badge", variant: :warning, size: :sm do %>Paused<% end %>
+    <% end %>
+  </div>
+
+  <% if queue_pausing_supported? %>
+    <div class="flex items-center gap-2">
+      <%= render "mission_control/jobs/queues/actions", queue: queue %>
+    </div>
+  <% end %>
+</div>

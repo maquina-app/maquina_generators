@@ -1,0 +1,11 @@
+<%# locals: (application:, job:) %>
+<div class="flex items-center gap-1">
+  <%= link_to application_job_path(application, job.job_id, clean_backtrace: true),
+      data: { component: "button", variant: clean_backtrace? ? "primary" : "outline", size: "sm" } do %>
+    Clean
+  <% end %>
+  <%= link_to application_job_path(application, job.job_id, clean_backtrace: false),
+      data: { component: "button", variant: !clean_backtrace? ? "primary" : "outline", size: "sm" } do %>
+    Full
+  <% end %>
+</div>

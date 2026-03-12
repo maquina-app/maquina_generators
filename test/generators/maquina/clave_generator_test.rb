@@ -34,7 +34,6 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     assert_file "app/models/session.rb", /class Session < ApplicationRecord/
     assert_file "app/models/email_verification.rb", /class EmailVerification < ApplicationRecord/
     assert_file "app/models/user.rb", /class User < ApplicationRecord/
-    assert_file "app/models/user.rb", /has_secure_password/
   end
 
   test "generates controller files" do
@@ -105,12 +104,6 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     assert_file "config/routes.rb", /resource :registration/
   end
 
-  test "enables bcrypt" do
-    run_generator
-
-    assert_file "Gemfile", /^gem "bcrypt"/
-  end
-
   test "generates migrations" do
     run_generator
 
@@ -170,11 +163,11 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     end
   end
 
-  test "views use indigo instead of resto colors" do
+  test "views use design system CSS variables" do
     run_generator
 
     assert_file "app/views/sessions/new.html.erb" do |content|
-      assert_match(/indigo/, content)
+      assert_match(/bg-primary/, content)
       assert_no_match(/resto/, content)
     end
   end

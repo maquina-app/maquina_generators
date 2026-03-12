@@ -1,0 +1,10 @@
+<%= render "components/table/cell" do %>
+  <div>
+    <%= link_to failed_job_error(job), application_job_path(@application, job.job_id, anchor: "error"),
+        class: "text-sm text-foreground hover:text-primary transition-colors" %>
+    <div class="text-xs text-muted-foreground mt-1"><%= time_distance_in_words_with_title(job.failed_at) %> ago</div>
+  </div>
+<% end %>
+<%= render "components/table/cell", css_classes: "text-right" do %>
+  <%= render "mission_control/jobs/jobs/failed/actions", job: job %>
+<% end %>

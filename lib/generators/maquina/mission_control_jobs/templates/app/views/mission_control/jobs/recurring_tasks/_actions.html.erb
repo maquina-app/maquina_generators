@@ -1,0 +1,8 @@
+<% if recurring_task.runnable? %>
+  <%= button_to application_recurring_task_path(@application, recurring_task.id),
+      method: :put,
+      data: { component: "button", variant: "secondary", size: "sm" } do %>
+    <%= icon_for(:activity, class: "size-4") %>
+    <span>Run now</span>
+  <% end %>
+<% end %>

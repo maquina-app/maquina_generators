@@ -1,0 +1,13 @@
+<%= render "components/table/cell" do %>
+  <%= link_to job.queue_name, application_queue_path(@application, job.queue),
+      class: "text-sm text-primary hover:underline" %>
+<% end %>
+<%= render "components/table/cell" do %>
+  <div class="text-xs font-mono text-foreground"><%= job.blocked_by %></div>
+  <div class="text-xs text-muted-foreground mt-1">
+    <%= job.blocked_until ? "Expires #{bidirectional_time_distance_in_words_with_title(job.blocked_until)}" : "" %>
+  </div>
+<% end %>
+<%= render "components/table/cell", css_classes: "text-right" do %>
+  <%= render "mission_control/jobs/jobs/blocked/actions", job: job %>
+<% end %>

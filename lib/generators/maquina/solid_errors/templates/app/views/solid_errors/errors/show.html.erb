@@ -1,16 +1,16 @@
-<div class="container mx-auto px-4 py-8">
+<div class="py-8">
   <!-- Header -->
   <%= render "solid_errors/errors/show/header", error: @error %>
 
-  <!-- Grid Layout (matching logs/events pattern) -->
+  <!-- Grid Layout -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
     <!-- Left Column: Error Details (2 cols) -->
     <div class="lg:col-span-2 space-y-6">
-      <%= render "solid_errors/errors/show/error_details", 
-          error: @error, 
+      <%= render "solid_errors/errors/show/error_details",
+          error: @error,
           latest_occurrence: @occurrences.first %>
-      <%= render "solid_errors/occurrences/collection", 
-          occurrences: @occurrences, 
+      <%= render "solid_errors/occurrences/collection",
+          occurrences: @occurrences,
           page: @page %>
     </div>
 

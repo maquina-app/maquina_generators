@@ -89,7 +89,6 @@ es:
       user:
         email_address: "Correo electronico"
         name: "Nombre"
-        password: "Contrasena"
         locale: "Idioma"
         blocked_at: "Bloqueado en"
         blocked_reason: "Razon de bloqueo"

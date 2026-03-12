@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Jobs - <%= page_title %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="turbo-cache-control" content="no-cache">
+
+  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags "application", importmap: MissionControl::Jobs.importmap %>
+</head>
+<body class="bg-background text-foreground">
+
+<div class="min-h-screen">
+  <%= render "layouts/admin_navigation" %>
+  <%= render "components/toaster" %>
+  <%= toast_flash_messages %>
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <%# Application/Server Selection Bar %>
+    <%= render "layouts/mission_control/jobs/application_selection" %>
+
+    <%# Tab Navigation %>
+    <%= render "layouts/mission_control/jobs/navigation" %>
+
+    <%# Page Content %>
+    <%= yield %>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+<div class="flex items-center justify-end mb-6">
+  <div class="flex items-center gap-4">
+    <%= render "layouts/mission_control/jobs/application_selection/servers", application: @application %>
+    <% if selectable_applications.any? %>
+      <%= render "layouts/mission_control/jobs/application_selection/applications" %>
+    <% end %>
+  </div>
+</div>

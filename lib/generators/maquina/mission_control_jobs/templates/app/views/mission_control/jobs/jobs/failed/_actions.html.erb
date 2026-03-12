@@ -1,0 +1,9 @@
+<div class="flex items-center gap-2 justify-end">
+  <%= button_to "Discard",
+      application_job_discard_path(@application, job.job_id, params: jobs_filter_param),
+      data: { component: "button", variant: "destructive", size: "sm" },
+      form: { data: { turbo_confirm: "This will delete the job and can't be undone. Are you sure?" } } %>
+  <%= button_to "Retry",
+      application_job_retry_path(@application, job.job_id, params: jobs_filter_param),
+      data: { component: "button", variant: "secondary", size: "sm" } %>
+</div>

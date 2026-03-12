@@ -1,0 +1,32 @@
+<%= render "components/table/row" do %>
+  <%= render "components/table/cell" do %>
+    <%= link_to recurring_task.id, application_recurring_task_path(@application, recurring_task.id),
+        class: "font-medium text-foreground hover:text-primary transition-colors" %>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <% if recurring_task.job_class_name.present? %>
+      <span class="text-sm text-foreground"><%= recurring_task.job_class_name %></span>
+      <% if recurring_task.arguments.present? %>
+        <div class="text-xs font-mono text-muted-foreground mt-1"><%= recurring_task.arguments.join(",") %></div>
+      <% end %>
+    <% elsif recurring_task.command.present? %>
+      <span class="text-xs font-mono text-muted-foreground"><%= recurring_task.command %></span>
+    <% end %>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm font-mono text-muted-foreground"><%= recurring_task.schedule %></span>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm text-muted-foreground">
+      <%= recurring_task.last_enqueued_at ? bidirectional_time_distance_in_words_with_title(recurring_task.last_enqueued_at) : "Never" %>
+    </span>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm text-muted-foreground">
+      <%= bidirectional_time_distance_in_words_with_title(recurring_task.next_time) %>
+    </span>
+  <% end %>
+  <%= render "components/table/cell", css_classes: "text-right" do %>
+    <%= render "mission_control/jobs/recurring_tasks/actions", recurring_task: recurring_task %>
+  <% end %>
+<% end %>

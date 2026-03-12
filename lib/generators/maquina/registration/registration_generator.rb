@@ -10,10 +10,24 @@ module Maquina
 
       class_option :skip_views, type: :boolean, default: false,
         desc: "Skip view templates"
+      class_option :quiet, type: :boolean, default: false,
+        desc: "Suppress post-install instructions"
 
       def self.next_migration_number(dirname)
-        sleep(1) if @prev_migration_nr == Time.now.utc.strftime("%Y%m%d%H%M%S")
-        @prev_migration_nr = Time.now.utc.strftime("%Y%m%d%H%M%S")
+        current = Time.now.utc.strftime("%Y%m%d%H%M%S")
+
+        if @prev_migration_nr && @prev_migration_nr >= current
+          current = @prev_migration_nr.succ
+        end
+
+        existing = Dir.glob("#{dirname}/[0-9]*_*.rb").map { |f| File.basename(f).split("_", 2).first }
+        max_existing = existing.max
+
+        if max_existing && max_existing >= current
+          current = max_existing.succ
+        end
+
+        @prev_migration_nr = current
       end
 
       # 1. Run Rails authentication generator
@@ -70,7 +84,20 @@ module Maquina
         route route_content
       end
 
-      # 9. Migrations
+      # 9. Enable bcrypt
+      def enable_bcrypt
+        gemfile_path = File.join(destination_root, "Gemfile")
+        if File.exist?(gemfile_path)
+          content = File.read(gemfile_path)
+          if content.include?('# gem "bcrypt"')
+            gsub_file "Gemfile", '# gem "bcrypt"', 'gem "bcrypt"'
+          elsif !content.include?('gem "bcrypt"')
+            append_to_file "Gemfile", "\ngem \"bcrypt\"\n"
+          end
+        end
+      end
+
+      # 10. Migrations
       def add_migrations
         migration_template "migration_create_accounts.rb.tt",
           "db/migrate/create_accounts.rb"
@@ -78,8 +105,10 @@ module Maquina
           "db/migrate/add_account_fields_to_users.rb"
       end
 
-      # 10. Post-install message
+      # 11. Post-install message
       def show_post_install
+        return if options[:quiet]
+
         say ""
         say "Registration has been installed!", :green
         say ""

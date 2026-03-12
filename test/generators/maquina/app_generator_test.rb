@@ -67,6 +67,28 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
       "// Entry point for the build script\n"
     )
 
+    File.write(
+      File.join(destination_root, "config/database.yml"),
+      <<~YAML
+        default: &default
+          adapter: sqlite3
+          pool: 5
+          timeout: 5000
+
+        development:
+          <<: *default
+          database: storage/development.sqlite3
+
+        test:
+          <<: *default
+          database: storage/test.sqlite3
+
+        production:
+          <<: *default
+          database: storage/production.sqlite3
+      YAML
+    )
+
     File.write(File.join(destination_root, ".gitignore"), "/log/*\n/tmp/*\n")
   end
 
@@ -86,7 +108,20 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
 
     assert_file "Gemfile" do |content|
       assert_match(/gem "rails-i18n"/, content)
-      assert_match(/gem "maquina_components"/, content)
+      assert_match(/gem "maquina-components"/, content)
+    end
+  end
+
+  test "removes rubocop-rails-omakase gem from Gemfile" do
+    File.write(
+      File.join(destination_root, "Gemfile"),
+      "source \"https://rubygems.org\"\ngem \"rubocop-rails-omakase\", require: false\n"
+    )
+
+    run_generator
+
+    assert_file "Gemfile" do |content|
+      assert_no_match(/rubocop-rails-omakase/, content)
     end
   end
 
@@ -102,6 +137,7 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_file "Procfile.dev" do |content|
       assert_match(/web: bin\/rails server -p 3000/, content)
       assert_match(/css: bin\/rails tailwindcss:watch/, content)
+      assert_match(/solid_queue: bin\/rails solid_queue:start/, content)
     end
   end
 
@@ -133,25 +169,6 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     run_generator
 
     assert_file ".gitignore", /config\/database\.yml/
-  end
-
-  test "creates bin/setup script" do
-    run_generator
-
-    assert_file "bin/setup" do |content|
-      assert_match(/bundle install/, content)
-      assert_match(/db:prepare/, content)
-    end
-  end
-
-  test "creates bin/ci script" do
-    run_generator
-
-    assert_file "bin/ci" do |content|
-      assert_match(/standardrb/, content)
-      assert_match(/brakeman/, content)
-      assert_match(/bundle-audit/, content)
-    end
   end
 
   test "creates generators initializer" do
@@ -187,6 +204,15 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "configures solid_queue in application" do
+    run_generator
+
+    assert_file "config/application.rb" do |content|
+      assert_match(/queue_adapter = :solid_queue/, content)
+      assert_match(/solid_queue\.connects_to/, content)
+    end
+  end
+
   test "adds yield :head to layout" do
     run_generator
 
@@ -203,6 +229,32 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "replaces styled main tag with plain main tag" do
+    File.write(
+      File.join(destination_root, "app/views/layouts/application.html.erb"),
+      <<~HTML
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>TestApp</title>
+          </head>
+          <body>
+            <main class="container mx-auto mt-28 px-5 flex">
+              <%= yield %>
+            </main>
+          </body>
+        </html>
+      HTML
+    )
+
+    run_generator
+
+    assert_file "app/views/layouts/application.html.erb" do |content|
+      assert_match(/<main>/, content)
+      assert_no_match(/container mx-auto mt-28 px-5 flex/, content)
+    end
+  end
+
   test "creates home controller" do
     run_generator
 
@@ -212,10 +264,21 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
   test "creates home view" do
     run_generator
 
-    assert_file "app/views/home/index.html.erb", /Welcome/
+    assert_file "app/views/home/index.html.erb", /Tools for Rails developers/
   end
 
   test "adds root route" do
+    run_generator
+
+    assert_file "config/routes.rb", /root "home#index"/
+  end
+
+  test "adds root route when commented root exists" do
+    File.write(
+      File.join(destination_root, "config/routes.rb"),
+      "Rails.application.routes.draw do\n  # root \"posts#index\"\nend\n"
+    )
+
     run_generator
 
     assert_file "config/routes.rb", /root "home#index"/
@@ -230,12 +293,30 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "configures multiple databases for all environments" do
+    run_generator
+
+    assert_file "config/database.yml" do |content|
+      %w[development test production].each do |env|
+        assert_match(/#{env}:\n  primary:/, content, "Missing primary database for #{env}")
+        assert_match(/#{env}_queue\.sqlite3/, content, "Missing queue database for #{env}")
+        assert_match(/#{env}_cache\.sqlite3/, content, "Missing cache database for #{env}")
+        assert_match(/#{env}_cable\.sqlite3/, content, "Missing cable database for #{env}")
+        assert_match(/#{env}_errors\.sqlite3/, content, "Missing errors database for #{env}")
+      end
+      assert_match(/migrations_paths: db\/queue_migrate/, content)
+      assert_match(/migrations_paths: db\/cache_migrate/, content)
+      assert_match(/migrations_paths: db\/cable_migrate/, content)
+      assert_match(/migrations_paths: db\/errors_migrate/, content)
+    end
+  end
+
   test "shows post-install message content" do
     output = run_generator
 
     assert_match(/Your Rails app is ready!/, output)
-    assert_match(/solid_errors:install/, output)
     assert_match(/credentials:edit/, output)
+    assert_match(/bin\/dev/, output)
   end
 
   test "does not install authentication by default" do

@@ -1,0 +1,35 @@
+<% navigation(title: "#{jobs_status.titleize} jobs", section: "#{jobs_status}_jobs".to_sym) %>
+
+<% if @jobs_page.empty? && !active_filters? %>
+  <%= empty_state(
+    title: "No #{jobs_status.to_s.dasherize} jobs",
+    description: "There are no #{jobs_status.to_s.dasherize} jobs at the moment.",
+    icon: :check_circle,
+    size: :default
+  ) %>
+<% else %>
+  <div class="space-y-4">
+    <%# Filters and toolbar %>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <%= render "mission_control/jobs/jobs/filters", job_class_names: @job_class_names, queue_names: @queue_names %>
+      <%= render "mission_control/jobs/jobs/toolbar", jobs_count: @jobs_count %>
+    </div>
+
+    <% if @jobs_page.empty? %>
+      <%= empty_state(
+        title: "No jobs found",
+        description: "No #{jobs_status.to_s.dasherize} jobs match the current filters.",
+        icon: :search,
+        size: :compact
+      ) %>
+    <% else %>
+      <%= render "components/card" do %>
+        <%= render "components/card/content", spacing: :full do %>
+          <%= render "mission_control/jobs/jobs/jobs_page", jobs_page: @jobs_page %>
+        <% end %>
+      <% end %>
+
+      <%= render "mission_control/jobs/shared/pagination_toolbar", page: @jobs_page, filter_param: jobs_filter_param %>
+    <% end %>
+  </div>
+<% end %>

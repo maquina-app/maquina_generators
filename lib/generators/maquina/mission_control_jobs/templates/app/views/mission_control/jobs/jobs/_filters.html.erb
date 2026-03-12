@@ -1,0 +1,55 @@
+<div>
+  <%= form_for :filter, url: application_jobs_path(MissionControl::Jobs::Current.application, jobs_status), method: :get,
+    data: { controller: "form", action: "input->form#debouncedSubmit" } do |form| %>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <div>
+        <%= form.label :job_class_name, data: { component: "label" }, class: "mb-1 block" %>
+        <%= form.text_field :job_class_name, value: @job_filters[:job_class_name],
+            data: { component: "input" },
+            list: "job-classes", placeholder: "Filter by job class...", autocomplete: "off" %>
+      </div>
+
+      <div>
+        <%= form.label :queue_name, data: { component: "label" }, class: "mb-1 block" %>
+        <%= form.text_field :queue_name, value: @job_filters[:queue_name],
+            data: { component: "input" },
+            list: "queue-names", placeholder: "Filter by queue name...", autocomplete: "off" %>
+      </div>
+
+      <% if jobs_status == "finished" %>
+        <div>
+          <%= form.label :finished_at_start, data: { component: "label" }, class: "mb-1 block" %>
+          <%= form.datetime_field :finished_at_start, value: @job_filters[:finished_at]&.begin,
+              data: { component: "input" }, placeholder: "Finished from" %>
+        </div>
+
+        <div>
+          <%= form.label :finished_at_end, data: { component: "label" }, class: "mb-1 block" %>
+          <%= form.datetime_field :finished_at_end, value: @job_filters[:finished_at]&.end,
+              data: { component: "input" }, placeholder: "Finished to" %>
+        </div>
+      <% end %>
+
+      <%= hidden_field_tag :server_id, MissionControl::Jobs::Current.server.id %>
+
+      <datalist id="job-classes">
+        <% job_class_names.each do |job_class_name| %>
+          <option value="<%= job_class_name %>"></option>
+        <% end %>
+      </datalist>
+
+      <datalist id="queue-names">
+        <% queue_names.each do |queue_name| %>
+          <option value="<%= queue_name %>"></option>
+        <% end %>
+      </datalist>
+
+      <div class="self-end mb-[3px]">
+        <%= link_to "Clear",
+            application_jobs_path(MissionControl::Jobs::Current.application, jobs_status, job_class_name: nil, queue_name: nil, finished_at: nil..nil),
+            data: { component: "button", variant: "outline", size: "sm" } %>
+      </div>
+    </div>
+  <% end %>
+</div>

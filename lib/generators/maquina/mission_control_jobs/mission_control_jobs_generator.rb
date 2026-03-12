@@ -11,6 +11,10 @@ module Maquina
         desc: "Environment variable for HTTP auth username"
       class_option :password_env_var, type: :string, default: "MISSION_CONTROL_JOBS_PASSWORD",
         desc: "Environment variable for HTTP auth password"
+      class_option :copy_views, type: :boolean, default: true,
+        desc: "Copy custom Mission Control Jobs views to the host app"
+      class_option :quiet, type: :boolean, default: false,
+        desc: "Suppress post-install instructions"
 
       # 1. BackstageController
       def create_backstage_controller
@@ -20,13 +24,19 @@ module Maquina
         template "app/controllers/backstage_controller.rb.tt", backstage_path
       end
 
-      # 2. Initializer
+      # 2. Helper
+      def create_helper
+        copy_file "app/helpers/mission_control_helper.rb",
+          "app/helpers/mission_control_helper.rb"
+      end
+
+      # 3. Initializer
       def create_initializer
         template "config/initializers/mission_control.rb.tt",
           "config/initializers/mission_control.rb"
       end
 
-      # 3. Add gem to Gemfile
+      # 4. Add gem to Gemfile
       def add_gem
         gemfile_path = File.join(destination_root, "Gemfile")
         if File.exist?(gemfile_path)
@@ -37,14 +47,34 @@ module Maquina
         end
       end
 
-      # 4. Routes
+      # 5. Routes
       def add_route
         mount_path = "#{options[:prefix]}/mission_control_jobs"
 
         route "mount MissionControl::Jobs::Engine, at: \"#{mount_path}\""
       end
 
-      # 5. Bundle install
+      # 6. Admin navigation
+      def create_admin_navigation
+        nav_path = "app/views/layouts/_admin_navigation.html.erb"
+        return if File.exist?(File.join(destination_root, nav_path))
+
+        template "app/views/layouts/_admin_navigation.html.erb.tt", nav_path
+      end
+
+      # 7. Layout
+      def copy_layout
+        layout_files.each { |f| copy_file f, f }
+      end
+
+      # 8. Custom views
+      def copy_views
+        return unless options[:copy_views]
+
+        view_files.each { |f| copy_file f, f }
+      end
+
+      # 9. Bundle install
       def run_bundle_install
         return unless rails_app?
 
@@ -53,8 +83,10 @@ module Maquina
         end
       end
 
-      # 6. Post-install message
+      # 10. Post-install message
       def show_post_install
+        return if options[:quiet]
+
         say ""
         say "Mission Control Jobs has been installed!", :green
         say ""
@@ -71,6 +103,20 @@ module Maquina
 
       def rails_app?
         File.exist?(File.join(destination_root, "bin/rails"))
+      end
+
+      def layout_files
+        layouts_dir = File.join(self.class.source_root, "app/views/layouts/mission_control")
+        Dir.glob("**/*.erb", base: layouts_dir).map do |file|
+          File.join("app/views/layouts/mission_control", file)
+        end
+      end
+
+      def view_files
+        views_dir = File.join(self.class.source_root, "app/views/mission_control")
+        Dir.glob("**/*.erb", base: views_dir).map do |file|
+          File.join("app/views/mission_control", file)
+        end
       end
     end
   end

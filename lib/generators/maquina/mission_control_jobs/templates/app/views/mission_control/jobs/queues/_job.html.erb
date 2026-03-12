@@ -1,0 +1,18 @@
+<%= render "components/table/row" do %>
+  <%= render "components/table/cell" do %>
+    <div>
+      <%= link_to application_job_path(@application, job.job_id, filter: { queue_name: job.queue }),
+          class: "font-medium text-foreground hover:text-primary transition-colors" do %>
+        <%= job_title(job) %>
+      <% end %>
+      <div class="text-xs text-muted-foreground mt-1">
+        Enqueued <%= time_distance_in_words_with_title(job.enqueued_at.to_datetime) %> ago
+      </div>
+    </div>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <% if job.serialized_arguments.present? %>
+      <span class="text-xs font-mono text-muted-foreground"><%= job_arguments(job) %></span>
+    <% end %>
+  <% end %>
+<% end %>

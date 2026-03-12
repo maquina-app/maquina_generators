@@ -1,0 +1,20 @@
+<div class="flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <h2 class="text-lg font-semibold text-foreground"><%= job_title(job) %></h2>
+    <%= render "components/badge", variant: job_status_badge_variant(job.status), size: :sm do %>
+      <%= job.status %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <% if job.failed? %>
+      <%= render "mission_control/jobs/jobs/failed/actions", job: job %>
+    <% end %>
+    <% if job.blocked? %>
+      <%= render "mission_control/jobs/jobs/blocked/actions", job: job %>
+    <% end %>
+    <% if job.scheduled? %>
+      <%= render "mission_control/jobs/jobs/scheduled/actions", job: job %>
+    <% end %>
+  </div>
+</div>

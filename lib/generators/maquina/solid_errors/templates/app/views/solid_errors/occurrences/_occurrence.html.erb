@@ -10,24 +10,8 @@
   <summary class="cursor-pointer p-4 hover:bg-muted/50 transition-colors list-none">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="
-            lucide text-muted-foreground group-open:rotate-90
-            transition-transform
-          "
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-        <time class="text-sm font-medium text-foreground"><%= local_time(seen_at) %></time>
+        <%= icon_for(:chevron_right, class: "size-4 text-muted-foreground group-open:rotate-90 transition-transform") %>
+        <time class="text-sm font-medium text-foreground"><%= seen_at.strftime("%B %d, %Y %H:%M:%S %Z") %></time>
         <span class="text-sm text-muted-foreground">(<%= time_ago_in_words(seen_at) %> ago)</span>
       </div>
     </div>
@@ -49,12 +33,8 @@
           <dl class="grid grid-cols-2 gap-3 text-sm">
             <% context.each do |key, value| %>
               <div>
-                <dt class="font-medium text-muted-foreground">
-                  <%= key.to_s.humanize %>
-                </dt>
-                <dd class="mt-1 font-mono text-foreground break-all">
-                  <%= value %>
-                </dd>
+                <dt class="font-medium text-muted-foreground"><%= key.to_s.humanize %></dt>
+                <dd class="mt-1 font-mono text-foreground break-all"><%= value %></dd>
               </div>
             <% end %>
           </dl>
@@ -64,18 +44,8 @@
         <% if env_content.present? %>
           <div>
             <h5 class="text-sm font-medium text-muted-foreground mb-2">Env</h5>
-            <div
-              class="
-                max-h-96 overflow-y-auto rounded-md border border-border
-                bg-muted/30 p-3
-              "
-            >
-              <pre
-                class="
-                  font-mono text-xs text-foreground whitespace-pre-wrap
-                  break-all
-                "
-              ><%= JSON.pretty_generate(env_content) rescue env_content.inspect %></pre>
+            <div class="max-h-96 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+              <pre class="font-mono text-xs text-foreground whitespace-pre-wrap break-all"><%= JSON.pretty_generate(env_content) rescue env_content.inspect %></pre>
             </div>
           </div>
         <% end %>
@@ -84,18 +54,8 @@
         <% if body_content.present? %>
           <div>
             <h5 class="text-sm font-medium text-muted-foreground mb-2">Body</h5>
-            <div
-              class="
-                max-h-96 overflow-y-auto rounded-md border border-border
-                bg-muted/30 p-3
-              "
-            >
-              <pre
-                class="
-                  font-mono text-xs text-foreground whitespace-pre-wrap
-                  break-all
-                "
-              ><%= JSON.pretty_generate(body_content) rescue body_content.inspect %></pre>
+            <div class="max-h-96 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+              <pre class="font-mono text-xs text-foreground whitespace-pre-wrap break-all"><%= JSON.pretty_generate(body_content) rescue body_content.inspect %></pre>
             </div>
           </div>
         <% end %>
@@ -103,21 +63,9 @@
         <!-- Params Content (full-width, scrollable) -->
         <% if params_content.present? %>
           <div>
-            <h5 class="text-sm font-medium text-muted-foreground mb-2">
-              Params
-            </h5>
-            <div
-              class="
-                max-h-96 overflow-y-auto rounded-md border border-border
-                bg-muted/30 p-3
-              "
-            >
-              <pre
-                class="
-                  font-mono text-xs text-foreground whitespace-pre-wrap
-                  break-all
-                "
-              ><%= JSON.pretty_generate(params_content) rescue params_content.inspect %></pre>
+            <h5 class="text-sm font-medium text-muted-foreground mb-2">Params</h5>
+            <div class="max-h-96 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+              <pre class="font-mono text-xs text-foreground whitespace-pre-wrap break-all"><%= JSON.pretty_generate(params_content) rescue params_content.inspect %></pre>
             </div>
           </div>
         <% end %>
@@ -130,15 +78,17 @@
         <h4 class="text-sm font-medium text-foreground">Backtrace</h4>
 
         <!-- Filter Buttons -->
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-medium text-muted-foreground">Filter:</span>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-medium text-muted-foreground mr-1">Filter:</span>
 
           <button
             type="button"
             data-filter="application"
             data-backtrace-filter-target="button"
             data-action="click->backtrace-filter#setFilter"
-            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+            data-component="button"
+            data-variant="outline"
+            data-size="sm"
           >
             Application
           </button>
@@ -148,7 +98,9 @@
             data-filter="framework"
             data-backtrace-filter-target="button"
             data-action="click->backtrace-filter#setFilter"
-            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+            data-component="button"
+            data-variant="outline"
+            data-size="sm"
           >
             Framework
           </button>
@@ -158,7 +110,9 @@
             data-filter="all"
             data-backtrace-filter-target="button"
             data-action="click->backtrace-filter#setFilter"
-            class="filter-button px-2 py-1 text-xs rounded-md transition-colors"
+            data-component="button"
+            data-variant="outline"
+            data-size="sm"
           >
             All
           </button>
@@ -166,8 +120,8 @@
       </div>
 
       <div class="space-y-1">
-        <%= render partial: "solid_errors/occurrences/backtrace_line", 
-            collection: backtrace.is_a?(Array) ? backtrace : backtrace.lines.first(20), 
+        <%= render partial: "solid_errors/occurrences/backtrace_line",
+            collection: backtrace.is_a?(Array) ? backtrace : backtrace.lines.first(20),
             as: :line %>
       </div>
     </div>

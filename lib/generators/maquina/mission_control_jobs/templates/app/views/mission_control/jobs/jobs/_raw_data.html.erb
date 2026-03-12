@@ -1,0 +1,9 @@
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Raw Data" %>
+  <% end %>
+
+  <%= render "components/card/content" do %>
+    <pre class="text-xs text-foreground whitespace-pre-wrap break-words font-mono bg-muted/50 p-4 rounded-md border border-border overflow-auto max-h-96"><%= JSON.pretty_generate(job.raw_data.without("backtrace")) %></pre>
+  <% end %>
+<% end %>

@@ -36,7 +36,6 @@ class Registration::VerificationsController < ApplicationController
 
     user = User.create!(
       email_address: @verification.email,
-      password: User.generate_secure_password,
       locale: @verification.locale || I18n.default_locale.to_s
     )
 

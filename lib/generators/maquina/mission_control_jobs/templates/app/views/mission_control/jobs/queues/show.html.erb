@@ -1,0 +1,52 @@
+<% navigation(title: "Queue #{@queue.name}", section: :queues) %>
+
+<div class="py-8">
+  <%# Header %>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-foreground">Queue Details</h1>
+      <p class="mt-1 text-sm text-muted-foreground">
+        <%= @queue.name %> &middot; <%= pluralize @queue.size, "pending job" %>
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <%= link_to application_queues_path(@application),
+          class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
+        <%= icon_for(:arrow_left, class: "size-4") %>
+        Back to Queues
+      <% end %>
+    </div>
+  </div>
+
+  <%# Queue title with pause/resume action %>
+  <%= render "mission_control/jobs/queues/queue_title", queue: @queue %>
+
+  <% if @jobs_page.empty? %>
+    <%= empty_state(
+      title: "Queue is empty",
+      description: "There are no pending jobs in this queue.",
+      icon: :inbox,
+      size: :default
+    ) %>
+  <% else %>
+    <div class="mt-6">
+      <%= render "components/card" do %>
+        <%= render "components/card/content", spacing: :full do %>
+          <%= render "components/table" do %>
+            <%= render "components/table/header" do %>
+              <%= render "components/table/row" do %>
+                <%= render "components/table/head" do %>Job<% end %>
+                <%= render "components/table/head" do %>Arguments<% end %>
+              <% end %>
+            <% end %>
+            <%= render "components/table/body" do %>
+              <%= render partial: "mission_control/jobs/queues/job", collection: @jobs_page.records %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%= render "mission_control/jobs/shared/pagination_toolbar", page: @jobs_page, filter_param: {} %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,26 @@
+<%= render "components/table/row" do %>
+  <%= render "components/table/cell" do %>
+    <div>
+      <%= link_to "worker #{worker.id}", application_worker_path(@application, worker.id),
+          class: "font-medium text-foreground hover:text-primary transition-colors" %>
+      <div class="text-xs text-muted-foreground mt-1"><%= worker.name %></div>
+    </div>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm font-mono text-muted-foreground"><%= worker.hostname %></span>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <% worker.jobs.each do |job| %>
+      <div class="mb-1">
+        <%= link_to job_title(job), application_job_path(@application, job.job_id),
+            class: "text-sm text-foreground hover:text-primary transition-colors" %>
+        <% if job.serialized_arguments.present? %>
+          <div class="text-xs font-mono text-muted-foreground"><%= job_arguments(job) %></div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+  <%= render "components/table/cell" do %>
+    <span class="text-sm text-muted-foreground"><%= time_distance_in_words_with_title(worker.last_heartbeat_at) %> ago</span>
+  <% end %>
+<% end %>

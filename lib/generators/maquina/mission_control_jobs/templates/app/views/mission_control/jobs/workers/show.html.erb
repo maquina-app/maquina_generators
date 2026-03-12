@@ -1,0 +1,54 @@
+<% navigation(title: "Worker #{@worker.id}", section: :workers) %>
+
+<div class="py-8">
+  <%# Header %>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-foreground">Worker Details</h1>
+      <p class="mt-1 text-sm text-muted-foreground">
+        worker <%= @worker.id %> &middot; <%= @worker.name %>
+      </p>
+    </div>
+    <div>
+      <%= link_to application_workers_path(@application),
+          class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
+        <%= icon_for(:arrow_left, class: "size-4") %>
+        Back to Workers
+      <% end %>
+    </div>
+  </div>
+
+  <%# Worker title %>
+  <%= render "mission_control/jobs/workers/title", worker: @worker %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <div class="lg:col-span-2 space-y-6">
+      <%# Running jobs %>
+      <% if @worker.jobs.empty? %>
+        <%= empty_state(
+          title: "Worker is idle",
+          description: "This worker is not currently processing any jobs.",
+          icon: :clock,
+          size: :compact
+        ) %>
+      <% else %>
+        <%= render "components/card" do %>
+          <%= render "components/card/header" do %>
+            <%= render "components/card/title", text: "Running #{pluralize(@worker.jobs.size, 'job')}" %>
+          <% end %>
+          <%= render "components/card/content", spacing: :full do %>
+            <%= render "mission_control/jobs/shared/jobs", jobs: @worker.jobs %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="space-y-6">
+      <%# Configuration %>
+      <%= render "mission_control/jobs/workers/configuration", worker: @worker %>
+
+      <%# Raw data %>
+      <%= render "mission_control/jobs/workers/raw_data", worker: @worker %>
+    </div>
+  </div>
+</div>

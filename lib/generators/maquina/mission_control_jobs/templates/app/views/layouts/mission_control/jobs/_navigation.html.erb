@@ -1,0 +1,11 @@
+<div class="mb-6 border-b border-border overflow-x-auto">
+  <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+    <% navigation_sections.each do |key, (label, url)| %>
+      <%= link_to url,
+          class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{key == current_section ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+        <%= icon_for(nav_icon_for_section(key), class: "size-4") %>
+        <span><%= label %></span>
+      <% end %>
+    <% end %>
+  </nav>
+</div>

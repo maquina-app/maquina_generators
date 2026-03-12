@@ -1,5 +1,4 @@
 class User < ApplicationRecord
-  has_secure_password
   has_many :sessions, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
@@ -9,10 +8,6 @@ class User < ApplicationRecord
 
   scope :active, -> { where(blocked_at: nil) }
   scope :blocked, -> { where.not(blocked_at: nil) }
-
-  def self.generate_secure_password
-    SecureRandom.hex(10)
-  end
 
   def blocked?
     blocked_at.present?

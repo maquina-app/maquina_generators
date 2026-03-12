@@ -1,0 +1,13 @@
+<%= render "components/table" do %>
+  <%= render "components/table/header" do %>
+    <%= render "components/table/row" do %>
+      <%= render "components/table/head" do %>Job<% end %>
+      <% attribute_names_for_job_status(jobs_status).each do |attribute| %>
+        <%= render "components/table/head" do %><%= attribute %><% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+  <%= render "components/table/body" do %>
+    <%= render partial: "mission_control/jobs/jobs/job", collection: jobs_page.records %>
+  <% end %>
+<% end %>

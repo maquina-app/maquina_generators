@@ -1,0 +1,15 @@
+<% if queue.active? %>
+  <%= button_to application_queue_pause_path(@application, queue.name),
+      method: :post,
+      data: { component: "button", variant: "secondary", size: "sm" } do %>
+    <%= icon_for(:slash, class: "size-4") %>
+    <span>Pause</span>
+  <% end %>
+<% else %>
+  <%= button_to application_queue_pause_path(@application, queue.name),
+      method: :delete,
+      data: { component: "button", variant: "primary", size: "sm" } do %>
+    <%= icon_for(:activity, class: "size-4") %>
+    <span>Resume</span>
+  <% end %>
+<% end %>

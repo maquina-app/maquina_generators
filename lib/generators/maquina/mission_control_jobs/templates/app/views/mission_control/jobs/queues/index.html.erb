@@ -1,0 +1,24 @@
+<% navigation(title: "Queues", section: :queues) %>
+
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Queues" %>
+  <% end %>
+
+  <%= render "components/card/content", spacing: :full do %>
+    <%= render "components/table" do %>
+      <%= render "components/table/header" do %>
+        <%= render "components/table/row" do %>
+          <%= render "components/table/head" do %>Queue<% end %>
+          <%= render "components/table/head" do %>Pending jobs<% end %>
+          <%= render "components/table/head", css_classes: "w-10" do %>
+            <span class="sr-only">Actions</span>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= render "components/table/body" do %>
+        <%= render partial: "mission_control/jobs/queues/queue", collection: @queues %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

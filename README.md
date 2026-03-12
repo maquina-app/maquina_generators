@@ -36,7 +36,6 @@ rails g maquina:clave
 Then:
 
 ```bash
-bundle install    # Install bcrypt
 rails db:migrate  # Run migrations
 ```
 
@@ -84,6 +83,7 @@ rails g maquina:registration
 Then:
 
 ```bash
+bundle install    # Install bcrypt
 rails db:migrate  # Run migrations
 ```
 
@@ -115,13 +115,16 @@ All generated code lives in your app -- edit it directly:
 - **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
 - **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
 - **Route:** Mounts `SolidErrors::Engine` under a configurable prefix
-- **Custom views:** Optionally copies custom Tailwind-styled views to override the gem defaults
+- **Admin navigation:** Shared navigation bar linking Solid Errors and Mission Control Jobs dashboards
+- **Custom layout:** Tailwind-styled layout with admin navigation and toast flash messages
+- **Stimulus controllers:** `clipboard_controller.js` and `backtrace_filter_controller.js`
+- **Custom views:** Tailwind-styled views to override the gem defaults (included by default, use `--no-copy-views` to skip)
 
 #### Usage
 
 ```bash
 rails g maquina:solid_errors --prefix /admin
-rails g maquina:solid_errors --prefix /admin --copy-views   # Include custom views
+rails g maquina:solid_errors --prefix /admin --no-copy-views   # Skip custom views
 ```
 
 The generator automatically runs `bundle install`. After running, execute `bin/rails generate solid_errors:install` (decline the initializer overwrite to keep your config), then `bin/rails db:migrate`.
@@ -129,8 +132,8 @@ The generator automatically runs `bundle install`. After running, execute `bin/r
 #### Options
 
 ```bash
-rails g maquina:solid_errors --prefix /admin                          # Default env vars
-rails g maquina:solid_errors --prefix /admin --copy-views             # With custom views
+rails g maquina:solid_errors --prefix /admin                          # Default (with custom views)
+rails g maquina:solid_errors --prefix /admin --no-copy-views          # Without custom views
 rails g maquina:solid_errors --prefix /backstage \
   --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
 ```
@@ -150,14 +153,19 @@ Credentials are resolved in order:
 
 #### What it generates
 
-- **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
+- **BackstageController:** Inherits from `ActionController::Base` with maquina_components helpers (bypasses app's ApplicationController concerns)
+- **Helper:** `MissionControlHelper` with `job_status_badge_variant` and `nav_icon_for_section`
 - **Initializer:** Sets base controller class, credentials-first auth with ENV variable fallback
 - **Route:** Mounts `MissionControl::Jobs::Engine` under a configurable prefix
+- **Admin navigation:** Shared navigation bar linking Solid Errors and Mission Control Jobs dashboards
+- **Custom layout:** Tailwind-styled layout with admin navigation, toast flash messages, application/server selection, and tab navigation
+- **Custom views:** Tailwind-styled views for jobs, queues, workers, and recurring tasks (included by default, use `--no-copy-views` to skip)
 
 #### Usage
 
 ```bash
 rails g maquina:mission_control_jobs --prefix /admin
+rails g maquina:mission_control_jobs --prefix /admin --no-copy-views   # Skip custom views
 ```
 
 The generator automatically runs `bundle install`.
@@ -165,7 +173,8 @@ The generator automatically runs `bundle install`.
 #### Options
 
 ```bash
-rails g maquina:mission_control_jobs --prefix /admin                  # Default env vars
+rails g maquina:mission_control_jobs --prefix /admin                  # Default (with custom views)
+rails g maquina:mission_control_jobs --prefix /admin --no-copy-views  # Without custom views
 rails g maquina:mission_control_jobs --prefix /backstage \
   --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
 ```
@@ -240,19 +249,23 @@ Customize rules in `config/initializers/rack_attack.rb`.
 
 #### What it does
 
-1. Adds development, runtime, and production gems (brakeman, standard, rails-i18n, maquina_components, aws-sdk-s3, etc.)
+1. Adds development, runtime, and production gems (brakeman, standard, rails-i18n, maquina-components, aws-sdk-s3, etc.)
 2. Creates `Procfile.dev`
 3. Creates `.rubocop.yml`, `.standard.yml`, appends to `.gitignore`
-4. Creates `bin/setup` and `bin/ci` scripts
-5. Creates `config/initializers/generators.rb`
-6. Configures development (letter_opener) and production (APPLICATION_HOST) environments
-7. Configures `field_error_proc` in application
-8. Installs Action Text and Active Storage
-9. Sets up ActiveStorage JavaScript imports
-10. Adds turbo morphing and `yield :head` to layout
-11. Invokes sub-generators: `maquina:rack_attack`, `maquina:solid_queue`, `maquina:mission_control_jobs`, `maquina:solid_errors`, `maquina_components:install`
-12. Creates a HomeController with root route
-13. Generates a README and `database.yml.example`
+4. Creates `config/initializers/generators.rb`
+5. Configures development (letter_opener) and production (APPLICATION_HOST) environments
+6. Configures `field_error_proc` and Solid Queue in `application.rb`
+7. Installs Action Text and Active Storage
+8. Sets up ActiveStorage JavaScript imports
+9. Adds turbo morphing, `yield :head`, and simplifies `<main>` tag in layout
+10. Optionally installs authentication (`maquina:clave` or `maquina:registration`)
+11. Invokes sub-generators: `maquina:rack_attack`, `maquina:mission_control_jobs`, `maquina:solid_errors`
+12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`
+13. Restores custom layouts overwritten by gem installers
+14. Configures multi-database `database.yml` (primary, queue, cache, cable, errors)
+15. Creates a HomeController with root route
+16. Generates a README and `database.yml.example`
+17. Runs `db:prepare`
 
 #### Usage
 
@@ -271,8 +284,6 @@ rails g maquina:app --auth registration
 #### After running
 
 ```bash
-bin/rails generate solid_errors:install   # decline initializer overwrite
-bin/rails db:migrate
 bin/rails credentials:edit                # set backstage username/password
 bin/dev
 ```

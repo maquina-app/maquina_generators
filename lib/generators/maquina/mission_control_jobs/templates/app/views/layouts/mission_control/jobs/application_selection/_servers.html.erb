@@ -1,0 +1,10 @@
+<% if application.servers.many? %>
+  <div class="flex items-center gap-1">
+    <% application.servers.each do |server| %>
+      <%= link_to application_queues_path(application, server_id: server),
+          data: { component: "button", variant: selected_server?(server) ? "primary" : "outline", size: "sm" } do %>
+        <%= server.name %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

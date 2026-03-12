@@ -5,6 +5,9 @@ module Maquina
     class RackAttackGenerator < Rails::Generators::Base
       source_root File.expand_path("templates", __dir__)
 
+      class_option :quiet, type: :boolean, default: false,
+        desc: "Suppress post-install instructions"
+
       # 1. Initializer
       def create_initializer
         template "config/initializers/rack_attack.rb.tt",
@@ -33,6 +36,8 @@ module Maquina
 
       # 4. Post-install message
       def show_post_install
+        return if options[:quiet]
+
         say ""
         say "Rack::Attack has been installed!", :green
         say ""

@@ -1,0 +1,35 @@
+<% if job.failed? %>
+  <%= render "components/card" do %>
+    <%= render "components/card/header", layout: :row do %>
+      <div class="flex items-center gap-2">
+        <%= icon_for(:circle_alert, class: "size-5 text-destructive") %>
+        <%= render "components/card/title", text: "Error Information" %>
+      </div>
+
+      <% if @server.backtrace_cleaner %>
+        <%= render "components/card/action" do %>
+          <%= render "mission_control/jobs/jobs/failed/backtrace_toggle", application: @application, job: job %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render "components/card/content" do %>
+      <div class="space-y-4">
+        <div>
+          <span class="text-sm text-muted-foreground">Type</span>
+          <p class="text-sm font-mono text-foreground mt-1"><%= job.last_execution_error.error_class %></p>
+        </div>
+
+        <div>
+          <span class="text-sm text-muted-foreground">Message</span>
+          <pre class="mt-2 text-sm text-foreground whitespace-pre-wrap break-words font-mono bg-muted/50 p-4 rounded-md border border-border overflow-auto max-h-48"><%= job.last_execution_error.try(:message) || job.last_execution_error.inspect %></pre>
+        </div>
+
+        <div>
+          <span class="text-sm text-muted-foreground">Backtrace</span>
+          <pre class="mt-2 text-xs text-foreground whitespace-pre-wrap break-words font-mono bg-muted/50 p-4 rounded-md border border-border overflow-auto max-h-96"><%= failed_job_backtrace(job, @server) %></pre>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

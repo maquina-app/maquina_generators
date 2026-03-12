@@ -89,7 +89,6 @@ en:
       user:
         email_address: "Email address"
         name: "Name"
-        password: "Password"
         locale: "Language"
         blocked_at: "Blocked at"
         blocked_reason: "Blocked reason"

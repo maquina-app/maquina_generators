@@ -23,7 +23,13 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
   test "generates backstage controller" do
     run_generator %w[--prefix /admin]
 
-    assert_file "app/controllers/backstage_controller.rb", /class BackstageController < ActionController::Base/
+    assert_file "app/controllers/backstage_controller.rb" do |content|
+      assert_match(/class BackstageController < ActionController::Base/, content)
+      assert_match(/helper MaquinaComponents::IconsHelper/, content)
+      assert_match(/helper MaquinaComponents::EmptyHelper/, content)
+      assert_match(/helper MaquinaComponentsHelper/, content)
+      assert_match(/helper SolidErrorsHelper/, content)
+    end
   end
 
   test "does not overwrite existing backstage controller" do
@@ -38,6 +44,15 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "app/controllers/backstage_controller.rb", /# custom/
   end
 
+  test "generates helper" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/helpers/solid_errors_helper.rb" do |content|
+      assert_match(/module SolidErrorsHelper/, content)
+      assert_match(/severity_badge_variant/, content)
+    end
+  end
+
   test "generates initializer with credentials-first auth" do
     run_generator %w[--prefix /admin]
 
@@ -46,6 +61,7 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
       assert_match(/ENV\.fetch\("SOLID_ERRORS_USER"/, content)
       assert_match(/ENV\.fetch\("SOLID_ERRORS_PASSWORD"/, content)
       assert_match(/connects_to/, content)
+      assert_match(/SolidErrors\.base_controller_class = "BackstageController"/, content)
     end
   end
 
@@ -89,15 +105,37 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/backstage/solid_errors"}
   end
 
-  test "does not copy views by default" do
+  test "generates admin navigation partial" do
     run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
+      assert_match(%r{/admin/solid_errors}, content)
+      assert_match(%r{/admin/mission_control_jobs}, content)
+      assert_match(/main_app\.root_path/, content)
+    end
+  end
+
+  test "does not overwrite existing admin navigation" do
+    mkdir_p("app/views/layouts")
+    File.write(
+      File.join(destination_root, "app/views/layouts/_admin_navigation.html.erb"),
+      "<nav><!-- custom --></nav>"
+    )
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb", /<!-- custom -->/
+  end
+
+  test "does not copy views with --no-copy-views" do
+    run_generator %w[--prefix /admin --no-copy-views]
 
     assert_no_file "app/views/solid_errors/errors/index.html.erb"
     assert_no_file "app/views/solid_errors/errors/show.html.erb"
   end
 
-  test "copies views with --copy-views" do
-    run_generator %w[--prefix /admin --copy-views]
+  test "copies views by default" do
+    run_generator %w[--prefix /admin]
 
     assert_file "app/views/solid_errors/errors/index.html.erb"
     assert_file "app/views/solid_errors/errors/show.html.erb"
@@ -112,6 +150,28 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "app/views/solid_errors/occurrences/_occurrence.html.erb"
     assert_file "app/views/solid_errors/occurrences/_collection.html.erb"
     assert_file "app/views/solid_errors/occurrences/_backtrace_line.html.erb"
+  end
+
+  test "copies layout with admin navigation and updated title" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/solid_errors/application.html.erb" do |content|
+      assert_match(/Admin - Errors/, content)
+      assert_match(/admin_navigation/, content)
+      assert_match(/bg-background/, content)
+      assert_match(/javascript_importmap_tags/, content)
+    end
+  end
+
+  test "copies stimulus controllers" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/javascript/controllers/clipboard_controller.js" do |content|
+      assert_match(/clipboard/, content)
+    end
+    assert_file "app/javascript/controllers/backtrace_filter_controller.js" do |content|
+      assert_match(/filterValueChanged/, content)
+    end
   end
 
   private

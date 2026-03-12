@@ -1,0 +1,17 @@
+<details class="relative">
+  <summary data-component="button" data-variant="outline" data-size="sm" class="cursor-pointer list-none">
+    <%= MissionControl::Jobs::Current.application.name %>
+    <%= icon_for(:chevron_up_down, class: "size-4 ml-1") %>
+  </summary>
+
+  <div class="absolute right-0 z-10 mt-2 w-48 rounded-md border border-border bg-card shadow-lg">
+    <div class="py-1">
+      <% selectable_applications.each do |application| %>
+        <%= link_to application_queues_path(application, server_id: nil),
+            class: "block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors" do %>
+          <%= application.name %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</details>

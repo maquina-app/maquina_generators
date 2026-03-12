@@ -1,0 +1,28 @@
+<nav class="border-b border-border bg-background">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-12">
+      <div class="flex items-center gap-6">
+        <span class="text-sm font-semibold text-foreground">Admin</span>
+        <div class="-mb-px flex items-center space-x-4">
+          <%%= link_to "<%= options[:prefix] %>/solid_errors",
+              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/solid_errors') ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+            <%%= icon_for(:alert_triangle, class: "size-4") %>
+            <span>Errors</span>
+          <%% end %>
+
+          <%%= link_to "<%= options[:prefix] %>/mission_control_jobs",
+              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/mission_control_jobs') ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+            <%%= icon_for(:briefcase, class: "size-4") %>
+            <span>Jobs</span>
+          <%% end %>
+        </div>
+      </div>
+
+      <%%= link_to main_app.root_path,
+          class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
+        <%%= icon_for(:arrow_left, class: "size-4") %>
+        Back to app
+      <%% end %>
+    </div>
+  </div>
+</nav>

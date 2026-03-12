@@ -19,9 +19,14 @@ module Maquina
 
         content = File.read(gemfile_path)
 
+        remove_gems = ["rubocop-rails-omakase"]
         dev_gems = {"brakeman" => nil, "bundle-audit" => nil, "letter_opener" => nil, "standard" => nil}
-        runtime_gems = {"rails-i18n" => nil, "maquina_components" => nil}
+        runtime_gems = {"rails-i18n" => nil, "maquina-components" => nil}
         production_gems = {"aws-sdk-s3" => nil}
+
+        remove_gems.each do |gem_name|
+          gsub_file "Gemfile", /^\s*gem\s+["']#{gem_name}["'].*\n/, ""
+        end
 
         dev_gems.each do |gem_name, _|
           unless content.include?("gem \"#{gem_name}\"")
@@ -67,15 +72,7 @@ module Maquina
         end
       end
 
-      # 4. Scripts
-      def create_scripts
-        template "bin/setup.tt", "bin/setup"
-        copy_file "bin/ci", "bin/ci"
-        chmod "bin/setup", 0o755
-        chmod "bin/ci", 0o755
-      end
-
-      # 5. Initializers
+      # 4. Initializers
       def create_initializers
         copy_file "config/initializers/generators.rb",
           "config/initializers/generators.rb"
@@ -104,6 +101,18 @@ module Maquina
             RUBY
           end
         end
+
+        unless content.include?("solid_queue")
+          inject_into_file "config/application.rb",
+            after: /class Application < Rails::Application\n/ do
+            <<~RUBY.indent(4)
+
+              # Use Solid Queue as the Active Job backend in all environments except test
+              config.active_job.queue_adapter = :solid_queue unless Rails.env.test?
+              config.solid_queue.connects_to = {database: {writing: :queue}}
+            RUBY
+          end
+        end
       end
 
       # 8. Install Rails features
@@ -113,7 +122,6 @@ module Maquina
         Bundler.with_unbundled_env do
           system("bin/rails action_text:install", chdir: destination_root)
           system("bin/rails active_storage:install", chdir: destination_root)
-          system("bin/rails db:migrate", chdir: destination_root)
         end
       end
 
@@ -161,6 +169,12 @@ module Maquina
             "<body>",
             '<body data-turbo-refresh-method="morph" data-turbo-refresh-scroll="preserve">'
         end
+
+        if content.include?('class="container mx-auto mt-28 px-5 flex"')
+          gsub_file "app/views/layouts/application.html.erb",
+            '<main class="container mx-auto mt-28 px-5 flex">',
+            "<main>"
+        end
       end
 
       # 11. Install authentication
@@ -169,9 +183,9 @@ module Maquina
 
         case options[:auth]
         when "clave"
-          generate "maquina:clave"
+          generate "maquina:clave", "--quiet"
         when "registration"
-          generate "maquina:registration"
+          generate "maquina:registration", "--quiet"
         end
       end
 
@@ -179,17 +193,40 @@ module Maquina
       def install_maquina_generators
         return unless rails_app?
 
-        generate "maquina:rack_attack"
-        generate "maquina:solid_queue"
-        generate "maquina:mission_control_jobs", "--prefix", options[:prefix]
-        generate "maquina:solid_errors", "--prefix", options[:prefix]
+        generate "maquina:rack_attack", "--quiet"
+        generate "maquina:mission_control_jobs", "--prefix", options[:prefix], "--quiet"
+        generate "maquina:solid_errors", "--prefix", options[:prefix], "--quiet"
 
         Bundler.with_unbundled_env do
-          system("bin/rails maquina_components:install", chdir: destination_root)
+          system("bin/rails generate solid_queue:install", chdir: destination_root)
+          system("bin/rails generate solid_errors:install", chdir: destination_root)
+          system("bin/rails generate solid_cache:install", chdir: destination_root)
+          system("bin/rails generate solid_cable:install", chdir: destination_root)
+          system("bin/rails generate maquina_components:install", chdir: destination_root)
         end
       end
 
-      # 13. Create home page
+      # 13. Restore custom layouts overwritten by gem installers
+      def restore_custom_layouts
+        return unless rails_app?
+
+        solid_errors_layout = File.expand_path(
+          "../solid_errors/templates/app/views/layouts/solid_errors/application.html.erb",
+          __dir__
+        )
+
+        if File.exist?(solid_errors_layout)
+          create_file "app/views/layouts/solid_errors/application.html.erb",
+            File.read(solid_errors_layout), force: true
+        end
+      end
+
+      # 14. Configure multiple databases (after installers so we overwrite their database.yml)
+      def configure_databases
+        template "config/database.yml.tt", "config/database.yml", force: true
+      end
+
+      # 15. Create home page
       def create_home_page
         template "app/controllers/home_controller.rb",
           "app/controllers/home_controller.rb"
@@ -199,18 +236,18 @@ module Maquina
         route_file = File.join(destination_root, "config/routes.rb")
         if File.exist?(route_file)
           content = File.read(route_file)
-          unless content.include?("root")
+          unless content.match?(/^\s*root\s/)
             route 'root "home#index"'
           end
         end
       end
 
-      # 14. Create README
+      # 16. Create README
       def create_readme
         template "README.md.erb", "README.md"
       end
 
-      # 15. Create database.yml.example
+      # 17. Create database.yml.example
       def create_database_sample
         db_config = File.join(destination_root, "config/database.yml")
         if File.exist?(db_config)
@@ -218,26 +255,43 @@ module Maquina
         end
       end
 
-      # 16. Post-install message
+      # 18. Run all migrations
+      def run_migrations
+        return unless rails_app?
+
+        Bundler.with_unbundled_env do
+          system("bin/rails db:prepare", chdir: destination_root)
+        end
+      end
+
+      # 19. Post-install message
       def show_post_install
         say ""
+        say "=" * 60, :green
         say "Your Rails app is ready!", :green
+        say "=" * 60, :green
         say ""
-        say "Manual steps:", :yellow
-        say "  1. bin/rails generate solid_errors:install"
-        say "     (decline initializer overwrite to keep your config)"
-        say "  2. bin/rails db:migrate"
-        say "  3. Set credentials: bin/rails credentials:edit"
+        say "Next steps:", :yellow
+        say "  1. Set credentials: bin/rails credentials:edit"
         say "     backstage:"
         say "       username: your_user"
         say "       password: your_password"
-        say "  4. Start the app: bin/dev"
+        say "  2. Start the app: bin/dev"
+        say ""
+        say "Installed components:", :yellow
+        say "  - Rack::Attack: rate limiting and blocklists (config/initializers/rack_attack.rb)"
+        say "  - Solid Queue: background jobs (config/solid_queue.yml)"
+        say "  - Mission Control Jobs: job dashboard at #{options[:prefix]}/mission_control_jobs"
+        say "  - Solid Errors: error tracking at #{options[:prefix]}/solid_errors"
+        say "  - Maquina Components: UI components"
         if options[:auth] != "none"
           say ""
           say "Authentication (#{options[:auth]}):", :yellow
-          say "  - Run bin/rails db:migrate if you haven't already"
-          say "  - Visit /registrations/new to sign up" if options[:auth] == "registration"
           say "  - Visit /session/new to sign in"
+          say "  - Visit /registrations/new to sign up" if options[:auth] == "registration"
+          say "  - Visit /registration/new to sign up" if options[:auth] == "clave"
+          say "  - Customize: app/controllers/concerns/authentication.rb"
+          say "  - Locales: config/locales/"
         end
         say ""
       end

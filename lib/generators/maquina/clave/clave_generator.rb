@@ -12,10 +12,24 @@ module Maquina
         desc: "Skip view templates"
       class_option :skip_registration, type: :boolean, default: false,
         desc: "Skip sign-up flow"
+      class_option :quiet, type: :boolean, default: false,
+        desc: "Suppress post-install instructions"
 
       def self.next_migration_number(dirname)
-        sleep(1) if @prev_migration_nr == Time.now.utc.strftime("%Y%m%d%H%M%S")
-        @prev_migration_nr = Time.now.utc.strftime("%Y%m%d%H%M%S")
+        current = Time.now.utc.strftime("%Y%m%d%H%M%S")
+
+        if @prev_migration_nr && @prev_migration_nr >= current
+          current = @prev_migration_nr.succ
+        end
+
+        existing = Dir.glob("#{dirname}/[0-9]*_*.rb").map { |f| File.basename(f).split("_", 2).first }
+        max_existing = existing.max
+
+        if max_existing && max_existing >= current
+          current = max_existing.succ
+        end
+
+        @prev_migration_nr = current
       end
 
       # 1. Models
@@ -130,20 +144,7 @@ module Maquina
         route route_content
       end
 
-      # 12. Enable bcrypt
-      def enable_bcrypt
-        gemfile_path = File.join(destination_root, "Gemfile")
-        if File.exist?(gemfile_path)
-          content = File.read(gemfile_path)
-          if content.include?('# gem "bcrypt"')
-            gsub_file "Gemfile", '# gem "bcrypt"', 'gem "bcrypt"'
-          elsif !content.include?('gem "bcrypt"')
-            append_to_file "Gemfile", "\ngem \"bcrypt\"\n"
-          end
-        end
-      end
-
-      # 13. Migrations
+      # 12. Migrations
       def add_migrations
         migration_template "migration_create_users.rb.tt",
           "db/migrate/create_users.rb"
@@ -153,18 +154,19 @@ module Maquina
           "db/migrate/create_email_verifications.rb"
       end
 
-      # 14. Post-install message
+      # 13. Post-install message
       def show_post_install
+        return if options[:quiet]
+
         say ""
         say "Clave authentication has been installed!", :green
         say ""
         say "Next steps:", :yellow
-        say "  1. bundle install                    # Install bcrypt"
-        say "  2. rails db:migrate                  # Run migrations"
-        say "  3. rails server                      # Start the app"
-        say "  4. Visit /session/new                # Sign-in page"
+        say "  1. rails db:migrate                  # Run migrations"
+        say "  2. rails server                      # Start the app"
+        say "  3. Visit /session/new                # Sign-in page"
         unless options[:skip_registration]
-          say "  5. Visit /registration/new           # Sign-up page"
+          say "  4. Visit /registration/new           # Sign-up page"
         end
         say ""
         say "Optional:", :yellow

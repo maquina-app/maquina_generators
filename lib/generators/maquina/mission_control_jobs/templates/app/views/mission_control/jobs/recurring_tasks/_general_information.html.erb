@@ -1,0 +1,45 @@
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Task Information" %>
+  <% end %>
+
+  <%= render "components/card/content" do %>
+    <div class="space-y-4">
+      <% if recurring_task.job_class_name.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Job class</span>
+          <p class="text-sm font-mono text-foreground mt-1"><%= recurring_task.job_class_name %></p>
+        </div>
+
+        <div>
+          <span class="text-sm text-muted-foreground">Arguments</span>
+          <div class="text-sm font-mono text-foreground mt-1"><%= recurring_task.arguments.join(",") %></div>
+        </div>
+      <% elsif recurring_task.command.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Command</span>
+          <div class="text-sm font-mono text-foreground mt-1"><%= recurring_task.command %></div>
+        </div>
+      <% end %>
+
+      <div>
+        <span class="text-sm text-muted-foreground">Schedule</span>
+        <p class="text-sm font-mono text-foreground mt-1"><%= recurring_task.schedule %></p>
+      </div>
+
+      <% if recurring_task.queue_name.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Queue</span>
+          <p class="text-sm text-foreground mt-1"><%= recurring_task.queue_name %></p>
+        </div>
+      <% end %>
+
+      <% if recurring_task.priority.present? %>
+        <div>
+          <span class="text-sm text-muted-foreground">Priority</span>
+          <p class="text-sm text-foreground mt-1"><%= recurring_task.priority %></p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,25 @@
+<nav class="flex items-center justify-end gap-4 mt-4" role="navigation" aria-label="Pagination">
+  <span class="text-sm text-muted-foreground">
+    <strong class="text-foreground"><%= page.index %></strong>
+    /
+    <strong class="text-foreground"><%= page.pages_count || "..." %></strong>
+  </span>
+
+  <div class="flex items-center gap-1">
+    <%= link_to url_for(page: page.previous_index, **filter_param),
+        data: { component: "button", variant: "outline", size: "sm" },
+        aria: { label: "Previous page", disabled: page.first? },
+        class: page.first? ? "pointer-events-none opacity-50" : "" do %>
+      <%= icon_for(:chevron_left, class: "size-4") %>
+      <span>Previous</span>
+    <% end %>
+
+    <%= link_to url_for(page: page.next_index, **filter_param),
+        data: { component: "button", variant: "outline", size: "sm" },
+        aria: { label: "Next page", disabled: page.last? },
+        class: page.last? ? "pointer-events-none opacity-50" : "" do %>
+      <span>Next</span>
+      <%= icon_for(:chevron_right, class: "size-4") %>
+    <% end %>
+  </div>
+</nav>

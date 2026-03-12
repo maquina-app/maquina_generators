@@ -1,0 +1,13 @@
+<% navigation(title: "Workers", section: :workers) %>
+
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Workers" %>
+  <% end %>
+
+  <%= render "components/card/content", spacing: :full do %>
+    <%= render "mission_control/jobs/workers/workers_page", workers_page: @workers_page %>
+  <% end %>
+<% end %>
+
+<%= render "mission_control/jobs/shared/pagination_toolbar", page: @workers_page, filter_param: {} %>
