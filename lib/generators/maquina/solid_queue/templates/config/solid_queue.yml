@@ -6,6 +6,10 @@ default: &default
     - queues: "*"
       threads: 3
       polling_interval: 0.1
+  recurring:
+    authentication_cleanup:
+      class: AuthenticationCleanupJob
+      schedule: every day at 3am
 
 development:
   <<: *default

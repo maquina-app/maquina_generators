@@ -61,6 +61,10 @@ class Maquina::Generators::SolidQueueGeneratorTest < Rails::Generators::TestCase
       assert_match(/workers:/, content)
       assert_match(/polling_interval:/, content)
       assert_match(/threads: 3/, content)
+      assert_match(/recurring:/, content)
+      assert_match(/authentication_cleanup:/, content)
+      assert_match(/AuthenticationCleanupJob/, content)
+      assert_match(/every day at 3am/, content)
     end
   end
 
