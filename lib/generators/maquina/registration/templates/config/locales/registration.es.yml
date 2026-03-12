@@ -15,6 +15,7 @@ es:
       submit: "Registrarse"
       have_account: "Ya tienes cuenta?"
       sign_in: "Inicia sesion"
+      optional: "(opcional)"
     create:
       success: "Tu cuenta ha sido creada. Bienvenido!"
       rate_limited: "Demasiados intentos. Por favor, espera unos minutos e intenta de nuevo."

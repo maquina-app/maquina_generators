@@ -6,7 +6,7 @@ class User < ApplicationRecord
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
-  validates :name, presence: true
+  validates :name, allow_blank: true, length: { maximum: 100 }
 
   enum :role, {member: "member", admin: "admin"}, default: "member"
 end

@@ -15,6 +15,7 @@ en:
       submit: "Sign up"
       have_account: "Already have an account?"
       sign_in: "Sign in"
+      optional: "(optional)"
     create:
       success: "Your account has been created. Welcome!"
       rate_limited: "Too many attempts. Please wait a few minutes and try again."

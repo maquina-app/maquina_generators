@@ -32,7 +32,7 @@ class Maquina::Generators::RegistrationGeneratorTest < Rails::Generators::TestCa
 
     assert_file "app/models/account.rb", /class Account < ApplicationRecord/
     assert_file "app/models/account.rb", /has_many :users/
-    assert_file "app/models/account.rb", /validates :name, presence: true/
+    assert_file "app/models/account.rb", /validates :name, allow_blank: true/
   end
 
   test "generates user model with account association and role" do
@@ -42,7 +42,7 @@ class Maquina::Generators::RegistrationGeneratorTest < Rails::Generators::TestCa
     assert_file "app/models/user.rb", /has_secure_password/
     assert_file "app/models/user.rb", /belongs_to :account/
     assert_file "app/models/user.rb", /enum :role/
-    assert_file "app/models/user.rb", /validates :name, presence: true/
+    assert_file "app/models/user.rb", /validates :name, allow_blank: true/
   end
 
   test "generates current model with account delegation" do

@@ -8,8 +8,8 @@
       <%%= form_with url: registrations_path, method: :post, class: "space-y-6" do |form| %>
         <div>
           <%%= form.label :account_name, t(".account_name"), class: "block text-sm font-medium text-foreground mb-2", data: { component: "label" } %>
+          <span class="text-xs text-muted-foreground"><%%= t(".optional") %></span>
           <%%= form.text_field :account_name,
-                               required: true,
                                autofocus: true,
                                value: @account_name,
                                placeholder: t(".account_name_placeholder"),
@@ -19,8 +19,8 @@
 
         <div>
           <%%= form.label :name, t(".name"), class: "block text-sm font-medium text-foreground mb-2", data: { component: "label" } %>
+          <span class="text-xs text-muted-foreground"><%%= t(".optional") %></span>
           <%%= form.text_field :name,
-                               required: true,
                                value: @user.name,
                                placeholder: t(".name_placeholder"),
                                data: { component: "input" },
