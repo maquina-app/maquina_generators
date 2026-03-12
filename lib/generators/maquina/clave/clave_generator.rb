@@ -34,6 +34,7 @@ module Maquina
 
       # 1. Models
       def create_models
+        template "app/models/account.rb.tt", "app/models/account.rb"
         template "app/models/current.rb.tt", "app/models/current.rb"
         template "app/models/session.rb.tt", "app/models/session.rb"
         template "app/models/email_verification.rb.tt", "app/models/email_verification.rb"
@@ -146,6 +147,8 @@ module Maquina
 
       # 12. Migrations
       def add_migrations
+        migration_template "migration_create_accounts.rb.tt",
+          "db/migrate/create_accounts.rb"
         migration_template "migration_create_users.rb.tt",
           "db/migrate/create_users.rb"
         migration_template "migration_create_sessions.rb.tt",

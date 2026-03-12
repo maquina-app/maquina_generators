@@ -1,9 +1,13 @@
 class User < ApplicationRecord
+  belongs_to :account
   has_many :sessions, dependent: :destroy
+
+  enum :role, {member: "member", admin: "admin"}, default: "member"
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
   validates :email_address, uniqueness: true
+  validates :name, allow_blank: true, length: { maximum: 100 }
   validate :email_cannot_contain_plus
 
   scope :active, -> { where(blocked_at: nil) }

@@ -1,8 +1,10 @@
 class CreateUsers < ActiveRecord::Migration<%= migration_version %>
   def change
     create_table :users do |t|
+      t.references :account, null: false, foreign_key: true
       t.string :email_address, null: false
       t.string :name
+      t.string :role, null: false, default: "member"
       t.string :locale
       t.datetime :blocked_at
       t.text :blocked_reason

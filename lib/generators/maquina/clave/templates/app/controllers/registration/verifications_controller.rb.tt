@@ -34,10 +34,15 @@ class Registration::VerificationsController < ApplicationController
       return
     end
 
-    user = User.create!(
-      email_address: @verification.email,
-      locale: @verification.locale || I18n.default_locale.to_s
-    )
+    user = nil
+    ActiveRecord::Base.transaction do
+      account = Account.create!
+      user = account.users.create!(
+        email_address: @verification.email,
+        locale: @verification.locale || I18n.default_locale.to_s,
+        role: :admin
+      )
+    end
 
     @verification.mark_verified!
     session.delete(:pending_verification_id)

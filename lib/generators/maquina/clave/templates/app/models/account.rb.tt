@@ -1,0 +1,5 @@
+class Account < ApplicationRecord
+  has_many :users, dependent: :destroy
+
+  validates :name, allow_blank: true, length: { maximum: 100 }
+end

@@ -30,10 +30,15 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
   test "generates model files" do
     run_generator
 
+    assert_file "app/models/account.rb", /class Account < ApplicationRecord/
+    assert_file "app/models/account.rb", /has_many :users/
     assert_file "app/models/current.rb", /class Current < ActiveSupport::CurrentAttributes/
+    assert_file "app/models/current.rb", /delegate :account, to: :user/
     assert_file "app/models/session.rb", /class Session < ApplicationRecord/
     assert_file "app/models/email_verification.rb", /class EmailVerification < ApplicationRecord/
     assert_file "app/models/user.rb", /class User < ApplicationRecord/
+    assert_file "app/models/user.rb", /belongs_to :account/
+    assert_file "app/models/user.rb", /enum :role/
   end
 
   test "generates controller files" do
@@ -107,7 +112,11 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
   test "generates migrations" do
     run_generator
 
-    assert_migration "db/migrate/create_users.rb"
+    assert_migration "db/migrate/create_accounts.rb"
+    assert_migration "db/migrate/create_users.rb" do |migration|
+      assert_match(/t\.references :account, null: false, foreign_key: true/, migration)
+      assert_match(/t\.string :role, null: false, default: "member"/, migration)
+    end
     assert_migration "db/migrate/create_sessions.rb"
     assert_migration "db/migrate/create_email_verifications.rb"
   end
