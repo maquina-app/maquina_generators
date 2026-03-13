@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2026-03-13
+
+### Added
+
+- Account model and multi-tenancy support to `maquina:clave` generator -- registration creates an Account in a transaction with the first user as admin.
+- `belongs_to :account`, `role` enum (member/admin), and `name` validation to the clave User model.
+- `delegate :account` to the clave Current model.
+- Accounts migration and account/role columns to the users migration in clave generator.
+
 ## [0.4.0] - 2026-03-12
 
 ### Added
