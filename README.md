@@ -10,13 +10,13 @@ A collection of Rails generators from the Maquina umbrella. Each generator produ
 
 #### What it generates
 
-- **Models:** `User`, `Session`, `EmailVerification`, `Current`
+- **Models:** `Account`, `User`, `Session`, `EmailVerification`, `Current`
 - **Controllers:** Sign-in/sign-up flows with email code verification
 - **Views:** Minimal, responsive forms styled with Tailwind CSS
 - **Mailer:** Verification code emails (HTML + text)
 - **Job:** Cleanup job for expired sessions and verifications
 - **Locale files:** English and Spanish translations
-- **Migrations:** 3 migrations (users, sessions, email_verifications)
+- **Migrations:** 4 migrations (accounts, users, sessions, email_verifications)
 - **Test helper:** `sign_in_as(user)` and `sign_out` for integration tests
 
 #### Installation
