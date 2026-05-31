@@ -7,9 +7,33 @@ Description:
   Authentication tries Rails credentials (backstage.username/password)
   first, then falls back to environment variables.
 
+  Regardless of options, ApplicationJob is patched to tag reported errors
+  with the job class, arguments, and id, so background-job failures appear
+  in the Solid Errors dashboard with replayable context.
+
+  With --agent, it also generates read-only AI-agent triage tooling: query
+  and triage objects over the errors store (with a redaction pass), a
+  bin/failures runner, and a stdio MCP server (bin/failures-mcp, gem "mcp").
+  The agent tooling never writes — resolution stays in the dashboards.
+
+  With --mcp-http (implies --agent), it additionally generates an
+  MCP-over-HTTP endpoint at <prefix>/failures/mcp, behind the same backstage
+  Basic Auth as the dashboards, so a developer can query a DEPLOYED app from
+  their machine over HTTPS. It self-disables until backstage credentials are
+  set. It serves redacted-but-sensitive data over the internet, so enable it
+  only where intended and put it behind an IP allowlist/VPN.
+
+  To query a deployed app without exposing HTTP, run the stdio server where the
+  errors DB lives and tunnel its stdio (the post-install prints ssh/docker/kamal
+  examples), or copy storage/<env>_errors.sqlite3 down for offline analysis.
+
 Examples:
   rails g maquina:solid_errors --prefix /admin
 
   rails g maquina:solid_errors --prefix /backstage \
     --user-env-var ADMIN_USER \
     --password-env-var ADMIN_PASSWORD
+
+  rails g maquina:solid_errors --prefix /admin --agent
+
+  rails g maquina:solid_errors --prefix /admin --mcp-http

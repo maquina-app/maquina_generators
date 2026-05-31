@@ -96,11 +96,18 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     run_generator
 
     assert_file "Gemfile" do |content|
-      assert_match(/gem "brakeman"/, content)
-      assert_match(/gem "bundle-audit"/, content)
-      assert_match(/gem "letter_opener"/, content)
-      assert_match(/gem "standard"/, content)
+      assert_match(/gem "brakeman", group: :development/, content)
+      assert_match(/gem "bundle-audit", group: :development/, content)
+      assert_match(/gem "letter_opener", group: :development/, content)
+      assert_match(/gem "standard", ">= 1.54", group: :development/, content)
     end
+  end
+
+  test "pins standard above the broken placeholder releases" do
+    run_generator
+
+    # 1.34.0.1 / 1.35.0.1 are inoperative placeholder gems; the constraint must exclude them
+    assert_file "Gemfile", /gem "standard", ">= 1\.54"/
   end
 
   test "adds runtime gems to Gemfile" do
@@ -156,7 +163,10 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
   test "creates rubocop config" do
     run_generator
 
-    assert_file ".rubocop.yml", /standard/
+    assert_file ".rubocop.yml" do |content|
+      assert_match(/standard/, content)
+      assert_match(/runner bridge, not custom RuboCop rules/, content)
+    end
   end
 
   test "creates standard config" do
@@ -333,7 +343,113 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_match(/registrations\/new/, output)
   end
 
+  test "injects database.yml restore into bin/setup" do
+    write_bin_setup
+
+    run_generator
+
+    assert_file "bin/setup" do |content|
+      assert_match(/unless File\.exist\?\("config\/database\.yml"\)/, content)
+      assert_match(/FileUtils\.cp "config\/database\.yml\.example", "config\/database\.yml"/, content)
+      # placed after bundle install, before preparing the database
+      assert_operator content.index("bundle install"), :<, content.index("database.yml.example")
+      assert_operator content.index("database.yml.example"), :<, content.index("Preparing database")
+    end
+  end
+
+  test "does not duplicate the bin/setup database restore" do
+    write_bin_setup
+
+    run_generator
+    run_generator
+
+    assert_file "bin/setup" do |content|
+      assert_equal 1, content.scan('FileUtils.cp "config/database.yml.example"').length
+    end
+  end
+
+  test "skips bin/setup when it does not exist" do
+    run_generator
+
+    assert_no_file "bin/setup"
+  end
+
+  test "injects database.yml restore before the CI test step" do
+    write_ci_workflow
+
+    run_generator
+
+    assert_file ".github/workflows/ci.yml" do |content|
+      assert_match(/- name: Prepare database config/, content)
+      assert_match(/run: cp config\/database\.yml\.example config\/database\.yml/, content)
+      assert_operator content.index("Prepare database config"), :<, content.index("- name: Run tests")
+    end
+  end
+
+  test "does not duplicate the CI database restore" do
+    write_ci_workflow
+
+    run_generator
+    run_generator
+
+    assert_file ".github/workflows/ci.yml" do |content|
+      assert_equal 1, content.scan("Prepare database config").length
+    end
+  end
+
+  test "skips CI workflow when it does not exist" do
+    run_generator
+
+    assert_no_file ".github/workflows/ci.yml"
+  end
+
   private
+
+  def write_bin_setup
+    mkdir_p("bin")
+    File.write(
+      File.join(destination_root, "bin/setup"),
+      <<~RUBY
+        #!/usr/bin/env ruby
+        require "fileutils"
+
+        APP_ROOT = File.expand_path("..", __dir__)
+
+        def system!(*args)
+          system(*args, exception: true)
+        end
+
+        FileUtils.chdir APP_ROOT do
+          system! "gem install bundler --conservative"
+          system("bundle check") || system!("bundle install")
+
+          puts "\\n== Preparing database =="
+          system! "bin/rails db:prepare"
+        end
+      RUBY
+    )
+  end
+
+  def write_ci_workflow
+    mkdir_p(".github/workflows")
+    File.write(
+      File.join(destination_root, ".github/workflows/ci.yml"),
+      <<~YAML
+        name: CI
+        on: [push]
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout code
+                uses: actions/checkout@v4
+              - name: Run tests
+                env:
+                  RAILS_ENV: test
+                run: bin/rails db:test:prepare test
+      YAML
+    )
+  end
 
   def mkdir_p(path)
     FileUtils.mkdir_p(File.join(destination_root, path))

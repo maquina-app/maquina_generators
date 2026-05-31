@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-05-31
+
+### Added
+
+- `--agent` option for `maquina:solid_errors` generator -- read-only AI-agent triage tooling over the errors store: `ErrorsQuery`/`FailureTriage`/`ErrorRedactor` objects, a `bin/failures` JSON runner, and a stdio MCP server (`bin/failures-mcp`) exposing `list_failures`/`get_exception`/`top_exceptions`. Adds `gem "mcp"`. Failed jobs and request exceptions are read from a single sink with sensitive keys redacted before reaching the agent.
+- `--mcp-http` option for `maquina:solid_errors` generator (implies `--agent`) -- mounts the read-only MCP tool surface over HTTP at `<prefix>/failures/mcp` behind the existing backstage Basic Auth, so a developer can query a deployed app remotely. Self-disables (503) until backstage credentials are set.
+- `ApplicationJob` `around_perform` hook (injected unconditionally by `maquina:solid_errors`) attaching job class, arguments, and id to errors reported to `Rails.error`, so background-job failures appear in the Solid Errors dashboard with replayable context.
+- Deploy-agnostic remote-access instructions (ssh / docker / kamal stdio tunneling, HTTP, and offline SQLite snapshot) in the generator post-install.
+
+### Fixed
+
+- Long failed-job error strings and arguments now wrap instead of overflowing in the Mission Control Jobs failed-jobs table and job detail views (`break-words overflow-wrap-anywhere`, with `line-clamp-2` in table cells).
+- `maquina:app` now restores the gitignored `config/database.yml` from `config/database.yml.example`: `bin/setup` copies it before `db:prepare`, and (when a GitHub Actions workflow exists) a "Prepare database config" step is injected before the CI test step. Without this, fresh clones and CI ran with no `database.yml` and every Rails task failed.
+- `maquina:app` now pins `standard` to `>= 1.54` in the generated Gemfile. The placeholder releases `1.34.0.1`/`1.35.0.1` carry a too-loose `rubocop ~> 1.62` requirement, so bundler backtracks onto them under rubocop version pressure and the resulting `standard` binary refuses to run.
+- Documented the generated `.rubocop.yml` as standard.rb's runner bridge (not custom RuboCop rules) with header comments in the file and at the `standard` gem declaration, so downstream guidance and the generator agree.
+
 ## [0.4.1] - 2026-03-13
 
 ### Added

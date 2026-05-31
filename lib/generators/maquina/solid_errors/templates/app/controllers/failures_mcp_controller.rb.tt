@@ -1,0 +1,65 @@
+# frozen_string_literal: true
+
+# Read-only MCP-over-HTTP endpoint exposing failure triage to an AI agent running
+# on a developer machine, so a deployed app can be queried remotely. Serves the
+# SAME read-only tool surface as bin/failures-mcp and NEVER writes.
+#
+# Auth reuses the backstage Basic Auth credentials (same as the Solid Errors
+# dashboard). It self-disables (503) until those credentials are configured, so it
+# can never be left as an open endpoint. It still serves redacted-but-sensitive
+# failure data over the network — keep it behind an IP allowlist/VPN and enable
+# only where you intend.
+class FailuresMcpController < ActionController::Base
+  skip_forgery_protection
+
+  before_action :require_backstage_credentials
+  before_action :authenticate
+
+  def handle
+    status, headers, rack_body = mcp_transport.handle_request(request)
+
+    body = +""
+    rack_body.each { |part| body << part }
+    headers.each { |key, value| response.headers[key] = value }
+
+    render body: body, status: status, content_type: headers["Content-Type"]
+  end
+
+  private
+
+  def mcp_transport
+    server = MCP::Server.new(
+      name: "failures",
+      tools: [ListFailuresTool, GetExceptionTool, TopExceptionsTool]
+    )
+    MCP::Server::Transports::StreamableHTTPTransport.new(server, stateless: true)
+  end
+
+  def authenticate
+    authenticate_or_request_with_http_basic("Failures MCP") do |user, pass|
+      secure_match?(user, backstage_username) & secure_match?(pass, backstage_password)
+    end
+  end
+
+  def require_backstage_credentials
+    return if backstage_username.present? && backstage_password.present?
+
+    head :service_unavailable
+  end
+
+  def secure_match?(given, expected)
+    ActiveSupport::SecurityUtils.secure_compare(given.to_s, expected.to_s)
+  end
+
+  def backstage
+    @backstage ||= Rails.application.credentials.backstage || {}
+  end
+
+  def backstage_username
+    backstage[:username] || ENV["<%= options[:user_env_var] %>"]
+  end
+
+  def backstage_password
+    backstage[:password] || ENV["<%= options[:password_env_var] %>"]
+  end
+end

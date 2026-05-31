@@ -174,7 +174,147 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     end
   end
 
+  test "injects job context hook into ApplicationJob" do
+    write_application_job
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/jobs/application_job.rb" do |content|
+      assert_match(/around_perform do \|job, block\|/, content)
+      assert_match(/Rails\.error\.set_context/, content)
+      assert_match(/active_job: job\.class\.name/, content)
+      assert_match(/arguments: job\.arguments/, content)
+      assert_match(/job_id: job\.job_id/, content)
+    end
+  end
+
+  test "injects job context hook even without --agent" do
+    write_application_job
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/jobs/application_job.rb", /Rails\.error\.set_context/
+  end
+
+  test "does not duplicate job context hook" do
+    write_application_job
+
+    run_generator %w[--prefix /admin]
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/jobs/application_job.rb" do |content|
+      assert_equal 1, content.scan("Rails.error.set_context").length
+    end
+  end
+
+  test "skips job hook when ApplicationJob is absent" do
+    run_generator %w[--prefix /admin]
+
+    assert_no_file "app/jobs/application_job.rb"
+  end
+
+  test "does not generate agent tooling by default" do
+    run_generator %w[--prefix /admin]
+
+    assert_no_file "app/agents/errors_query.rb"
+    assert_no_file "bin/failures"
+    assert_no_file "bin/failures-mcp"
+    assert_file "Gemfile" do |content|
+      assert_no_match(/gem "mcp"/, content)
+    end
+  end
+
+  test "generates agent tooling with --agent" do
+    run_generator %w[--prefix /admin --agent]
+
+    assert_file "app/agents/error_redactor.rb", /class ErrorRedactor/
+    assert_file "app/agents/errors_query.rb", /class ErrorsQuery/
+    assert_file "app/agents/failure_triage.rb", /class FailureTriage/
+    assert_file "app/agents/list_failures_tool.rb" do |content|
+      assert_match(/class ListFailuresTool < MCP::Tool/, content)
+      assert_match(/tool_name "list_failures"/, content)
+    end
+    assert_file "app/agents/get_exception_tool.rb", /tool_name "get_exception"/
+    assert_file "app/agents/top_exceptions_tool.rb", /tool_name "top_exceptions"/
+  end
+
+  test "generates executable bin runners with --agent" do
+    run_generator %w[--prefix /admin --agent]
+
+    assert_file "bin/failures", %r{FailureTriage\.overview}
+    assert_file "bin/failures-mcp" do |content|
+      assert_match(/MCP::Server\.new/, content)
+      assert_match(/StdioTransport/, content)
+    end
+    assert File.executable?(File.join(destination_root, "bin/failures"))
+    assert File.executable?(File.join(destination_root, "bin/failures-mcp"))
+  end
+
+  test "adds mcp gem with --agent" do
+    run_generator %w[--prefix /admin --agent]
+
+    assert_file "Gemfile", /gem "mcp"/
+  end
+
+  test "redaction layer masks sensitive keys" do
+    run_generator %w[--prefix /admin --agent]
+
+    assert_file "app/agents/error_redactor.rb" do |content|
+      assert_match(/SENSITIVE_KEY_PATTERN/, content)
+      assert_match(/pass\(word\)\?|token|secret/, content)
+    end
+  end
+
+  test "does not generate MCP-over-HTTP controller without --mcp-http" do
+    run_generator %w[--prefix /admin --agent]
+
+    assert_no_file "app/controllers/failures_mcp_controller.rb"
+    assert_file "config/routes.rb" do |content|
+      assert_no_match(/failures_mcp#handle/, content)
+    end
+  end
+
+  test "generates MCP-over-HTTP controller and route with --mcp-http" do
+    run_generator %w[--prefix /admin --mcp-http]
+
+    assert_file "app/controllers/failures_mcp_controller.rb" do |content|
+      assert_match(/class FailuresMcpController < ActionController::Base/, content)
+      assert_match(/skip_forgery_protection/, content)
+      assert_match(/StreamableHTTPTransport/, content)
+      assert_match(/credentials\.backstage/, content)
+      assert_match(/secure_compare/, content)
+      assert_match(/head :service_unavailable/, content)
+    end
+    assert_file "config/routes.rb",
+      %r{match "/admin/failures/mcp", to: "failures_mcp#handle", via: %i\[get post delete\]}
+  end
+
+  test "mcp-http controller uses configured auth env vars" do
+    run_generator %w[--prefix /admin --mcp-http --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD]
+
+    assert_file "app/controllers/failures_mcp_controller.rb" do |content|
+      assert_match(/ENV\["ADMIN_USER"\]/, content)
+      assert_match(/ENV\["ADMIN_PASSWORD"\]/, content)
+    end
+  end
+
+  test "--mcp-http implies --agent" do
+    run_generator %w[--prefix /admin --mcp-http]
+
+    assert_file "app/agents/failure_triage.rb"
+    assert_file "bin/failures-mcp"
+    assert_file "Gemfile", /gem "mcp"/
+  end
+
   private
+
+  def write_application_job
+    mkdir_p("app/jobs")
+    File.write(
+      File.join(destination_root, "app/jobs/application_job.rb"),
+      "class ApplicationJob < ActiveJob::Base\nend\n"
+    )
+  end
 
   def mkdir_p(path)
     FileUtils.mkdir_p(File.join(destination_root, path))

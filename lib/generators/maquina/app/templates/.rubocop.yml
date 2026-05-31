@@ -1,3 +1,9 @@
+# standard.rb's runner bridge, not custom RuboCop rules.
+#
+# This is the entry point RuboCop (and editors/LSP) need to run the Standard
+# ruleset — all style comes from the `standard` gem via config/base.yml below.
+# Keep this file even though general guidance says "no .rubocop.yml": for
+# standard.rb this IS the runner config, not a custom rule set.
 require:
   - standard
 
