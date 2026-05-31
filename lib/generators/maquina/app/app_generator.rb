@@ -20,7 +20,16 @@ module Maquina
         content = File.read(gemfile_path)
 
         remove_gems = ["rubocop-rails-omakase"]
-        dev_gems = {"brakeman" => nil, "bundle-audit" => nil, "letter_opener" => nil, "standard" => nil}
+        # standard >= 1.54: avoids the inoperative placeholder releases
+        # (1.34.0.1 / 1.35.0.1) whose too-loose `rubocop ~> 1.62` requirement
+        # makes bundler backtrack onto them and pair them with an incompatible
+        # rubocop, so the `standard` binary refuses to run.
+        #
+        # standard.rb runs through the generated .rubocop.yml (see
+        # create_config_files) — that file is standard.rb's runner bridge, not
+        # custom RuboCop rules, so it ships even though guidance says "no
+        # .rubocop.yml".
+        dev_gems = {"brakeman" => nil, "bundle-audit" => nil, "letter_opener" => nil, "standard" => ">= 1.54"}
         runtime_gems = {"rails-i18n" => nil, "maquina-components" => nil}
         production_gems = {"aws-sdk-s3" => nil}
 
@@ -28,22 +37,19 @@ module Maquina
           gsub_file "Gemfile", /^\s*gem\s+["']#{gem_name}["'].*\n/, ""
         end
 
-        dev_gems.each do |gem_name, _|
-          unless content.include?("gem \"#{gem_name}\"")
-            append_to_file "Gemfile", "\ngem \"#{gem_name}\", group: :development\n"
-          end
+        dev_gems.each do |gem_name, version|
+          next if content.include?("gem \"#{gem_name}\"")
+          append_to_file "Gemfile", "\n#{gem_line(gem_name, version, group: :development)}\n"
         end
 
-        runtime_gems.each do |gem_name, _|
-          unless content.include?("gem \"#{gem_name}\"")
-            append_to_file "Gemfile", "\ngem \"#{gem_name}\"\n"
-          end
+        runtime_gems.each do |gem_name, version|
+          next if content.include?("gem \"#{gem_name}\"")
+          append_to_file "Gemfile", "\n#{gem_line(gem_name, version)}\n"
         end
 
-        production_gems.each do |gem_name, _|
-          unless content.include?("gem \"#{gem_name}\"")
-            append_to_file "Gemfile", "\ngem \"#{gem_name}\", group: :production\n"
-          end
+        production_gems.each do |gem_name, version|
+          next if content.include?("gem \"#{gem_name}\"")
+          append_to_file "Gemfile", "\n#{gem_line(gem_name, version, group: :production)}\n"
         end
 
         return unless rails_app?
@@ -255,7 +261,45 @@ module Maquina
         end
       end
 
-      # 18. Run all migrations
+      # 18. Restore database.yml from its example in bin/setup. config/database.yml
+      #     is gitignored (it differs per environment), so a fresh clone has only
+      #     the committed example — bin/setup must copy it before db:prepare.
+      def configure_bin_setup
+        setup_file = File.join(destination_root, "bin/setup")
+        return unless File.exist?(setup_file)
+        return if File.read(setup_file).include?("config/database.yml.example")
+
+        inject_into_file "bin/setup",
+          after: %r{system\("bundle check"\) \|\| system!\("bundle install"\)\n} do
+          <<~RUBY.indent(2)
+
+            # config/database.yml is gitignored; restore it from the committed example
+            unless File.exist?("config/database.yml")
+              puts "\\n== Copying config/database.yml =="
+              FileUtils.cp "config/database.yml.example", "config/database.yml"
+            end
+          RUBY
+        end
+      end
+
+      # 19. Restore database.yml from its example in CI. Without it, the test job
+      #     boots with no database.yml and every Rails task fails. Only touched
+      #     when the host app already has a GitHub Actions workflow.
+      def configure_ci
+        ci_file = File.join(destination_root, ".github/workflows/ci.yml")
+        return unless File.exist?(ci_file)
+        return if File.read(ci_file).include?("config/database.yml.example")
+
+        inject_into_file ".github/workflows/ci.yml",
+          before: /^      - name: Run tests$/ do
+          <<~YAML.indent(6)
+            - name: Prepare database config
+              run: cp config/database.yml.example config/database.yml
+          YAML
+        end
+      end
+
+      # 20. Run all migrations
       def run_migrations
         return unless rails_app?
 
@@ -264,7 +308,7 @@ module Maquina
         end
       end
 
-      # 19. Post-install message
+      # 21. Post-install message
       def show_post_install
         say ""
         say "=" * 60, :green
@@ -297,6 +341,13 @@ module Maquina
       end
 
       private
+
+      def gem_line(name, version, group: nil)
+        line = "gem \"#{name}\""
+        line << ", \"#{version}\"" if version
+        line << ", group: :#{group}" if group
+        line
+      end
 
       def rails_app?
         File.exist?(File.join(destination_root, "bin/rails"))

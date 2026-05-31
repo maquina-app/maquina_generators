@@ -24,4 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "rails", ">= 7.2"
   spec.add_development_dependency "rake", "~> 13.0"
+  # Used only to smoke-test the generated MCP tool templates against the real
+  # gem API; the generated app installs its own copy via the --agent flag.
+  spec.add_development_dependency "mcp", "~> 0.8"
 end

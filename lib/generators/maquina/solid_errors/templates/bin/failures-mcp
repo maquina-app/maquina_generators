@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Stdio MCP server exposing read-only failure triage to an AI agent.
+# Wraps the same FailureTriage entry point as bin/failures.
+#
+# Register with Claude Code (run from the app root):
+#   claude mcp add failures -- bin/failures-mcp
+#
+# Tool surface (all read-only): list_failures, get_exception, top_exceptions.
+
+require_relative "../config/environment"
+require "mcp"
+require "json"
+
+server = MCP::Server.new(
+  name: "failures",
+  tools: [ListFailuresTool, GetExceptionTool, TopExceptionsTool]
+)
+
+MCP::Server::Transports::StdioTransport.new(server).open

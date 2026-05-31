@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Read-only failure triage for AI agents and humans. Prints JSON to stdout.
+# Zero infrastructure: the agent just shells out to this.
+#
+#   bin/failures                       # unresolved errors (overview)
+#   bin/failures overview
+#   bin/failures top [limit]           # most frequent unresolved errors
+#   bin/failures exception <fingerprint>
+#
+# Resolution stays a human action in the Backstage dashboards — this never writes.
+
+require_relative "../config/environment"
+require "json"
+
+command = ARGV[0] || "overview"
+
+result =
+  case command
+  when "overview"
+    FailureTriage.overview
+  when "top"
+    FailureTriage.top(limit: (ARGV[1] || ErrorsQuery::TOP_LIMIT).to_i)
+  when "exception"
+    fingerprint = ARGV[1] || abort("usage: bin/failures exception <fingerprint>")
+    begin
+      FailureTriage.exception(fingerprint)
+    rescue ActiveRecord::RecordNotFound
+      warn JSON.pretty_generate(error: "No unresolved error found for fingerprint #{fingerprint}")
+      exit 1
+    end
+  else
+    abort("unknown command: #{command}\nusage: bin/failures [overview | top [limit] | exception <fingerprint>]")
+  end
+
+puts JSON.pretty_generate(result)
