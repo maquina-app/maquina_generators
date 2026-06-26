@@ -152,6 +152,25 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "app/views/solid_errors/occurrences/_backtrace_line.html.erb"
   end
 
+  test "copies self-contained mailer templates that avoid dashboard-only helpers" do
+    run_generator %w[--prefix /admin]
+
+    %w[
+      app/views/solid_errors/error_mailer/error_occurred.html.erb
+      app/views/solid_errors/error_mailer/error_occurred.text.erb
+    ].each do |path|
+      assert_file path do |content|
+        # The mailer renders without the BackstageController helpers, so these
+        # templates must not reuse the themed dashboard partials or their
+        # icon_for/Stimulus dependencies (the cause of the email render loop).
+        body = content.gsub(/<%#.*?%>/m, "")
+        assert_no_match(/icon_for/, body)
+        assert_no_match(/data-controller/, body)
+        assert_no_match(%r{render\s+["']solid_errors/}, body)
+      end
+    end
+  end
+
   test "copies layout with admin navigation and updated title" do
     run_generator %w[--prefix /admin]
 
