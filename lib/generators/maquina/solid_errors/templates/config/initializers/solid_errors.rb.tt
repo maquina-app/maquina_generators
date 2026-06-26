@@ -9,4 +9,16 @@ Rails.application.configure do
 
   config.solid_errors.username = backstage[:username] || ENV.fetch("<%= options[:user_env_var] %>", nil)
   config.solid_errors.password = backstage[:password] || ENV.fetch("<%= options[:password_env_var] %>", nil)
+
+  # Optional: email a notification on each new error. Safe to enable — this
+  # generator installs self-contained mailer templates
+  # (app/views/solid_errors/error_mailer/error_occurred.{html,text}.erb) so the
+  # email never renders the themed dashboard partials, which depend on the
+  # maquina_components `icon_for` helper and Stimulus and only resolve in the
+  # BackstageController context. Without that override the email would raise on
+  # every error and SolidErrors would re-mail the failure, a self-amplifying
+  # loop. Set a recipient (email_to) or it stays off regardless.
+  # config.solid_errors.send_emails = true
+  # config.solid_errors.email_from = "no-reply@example.com"
+  # config.solid_errors.email_to = "ops@example.com"
 end
