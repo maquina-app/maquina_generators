@@ -67,6 +67,13 @@ module Maquina
         layout_files.each { |f| copy_file f, f }
       end
 
+      # 7b. Backstage dashboard — admin overview at the prefix root, linking to
+      #     the installed engines. Shared with the solid_errors generator, so
+      #     guard every step for idempotency when both run.
+      def create_backstage_dashboard
+        install_backstage_dashboard
+      end
+
       # 8. Custom views
       def copy_views
         return unless options[:copy_views]
@@ -103,6 +110,30 @@ module Maquina
 
       def rails_app?
         File.exist?(File.join(destination_root, "bin/rails"))
+      end
+
+      # Idempotent install of the shared backstage dashboard (controller, layout,
+      # prefix-aware view, and the prefix-root route). Safe to run from both this
+      # generator and solid_errors.
+      def install_backstage_dashboard
+        unless File.exist?(File.join(destination_root, "app/controllers/backstage_dashboard_controller.rb"))
+          copy_file "app/controllers/backstage_dashboard_controller.rb",
+            "app/controllers/backstage_dashboard_controller.rb"
+        end
+
+        unless File.exist?(File.join(destination_root, "app/views/layouts/admin.html.erb"))
+          copy_file "app/views/layouts/admin.html.erb", "app/views/layouts/admin.html.erb"
+        end
+
+        unless File.exist?(File.join(destination_root, "app/views/backstage_dashboard/index.html.erb"))
+          template "app/views/backstage_dashboard/index.html.erb.tt",
+            "app/views/backstage_dashboard/index.html.erb"
+        end
+
+        routes_path = File.join(destination_root, "config/routes.rb")
+        if File.exist?(routes_path) && !File.read(routes_path).include?("backstage_dashboard#index")
+          route %(get "#{options[:prefix]}" => "backstage_dashboard#index", as: :backstage_dashboard)
+        end
       end
 
       def layout_files

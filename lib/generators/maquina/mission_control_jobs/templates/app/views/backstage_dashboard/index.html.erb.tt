@@ -1,0 +1,76 @@
+<div class="py-8">
+  <!-- Header -->
+  <div class="mb-6 flex items-end justify-between border-b border-border pb-4">
+    <h1 class="text-2xl font-bold text-foreground">Overview</h1>
+    <%% if @generated_at %>
+      <p class="font-mono text-[11px] tabular-nums text-muted-foreground">as of <%%= @generated_at.strftime("%H:%M %Z") %></p>
+    <%% end %>
+  </div>
+
+  <!-- Metrics: populate @metrics in BackstageDashboardController#index. Aggregate-only. -->
+  <%% if @metrics.present? %>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <%% @metrics.each do |metric| %>
+        <%%= render "components/card" do %>
+          <div class="px-5 py-4">
+            <div class="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <%% if metric[:icon] %><%%= icon_for(metric[:icon], class: "size-3.5") %><%% end %>
+              <%%= metric[:label] %>
+            </div>
+            <div class="font-display text-4xl font-semibold tabular-nums text-foreground">
+              <%%= number_with_delimiter(metric[:value]) %><%% if metric[:total] %><span class="text-xl text-muted-foreground">/<%%= number_with_delimiter(metric[:total]) %></span><%% end %>
+            </div>
+            <%% if metric[:hint] %>
+              <div class="mt-1 text-[11px] tabular-nums text-muted-foreground"><%%= metric[:hint] %></div>
+            <%% end %>
+          </div>
+        <%% end %>
+      <%% end %>
+    </div>
+  <%% else %>
+    <%%= empty_state(
+      title: "No metrics yet",
+      description: "Add aggregate counts in BackstageDashboardController#index to populate this overview.",
+      icon: :layout_grid,
+      size: :default
+    ) %>
+  <%% end %>
+
+  <!-- Operations: entry points to the installed engines -->
+  <h2 class="mt-10 mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Operations</h2>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <%% if defined?(SolidErrors::Engine) %>
+      <%%= link_to "<%= options[:prefix] %>/errors", class: "group block" do %>
+        <%%= render "components/card", css_classes: "transition-shadow hover:shadow-md" do %>
+          <div class="flex items-center gap-4 px-5 py-4">
+            <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <%%= icon_for(:alert_triangle, class: "size-5") %>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-foreground">Errors</div>
+              <div class="text-sm text-muted-foreground">Exceptions, backtraces, and resolution</div>
+            </div>
+            <%%= icon_for(:arrow_right, class: "size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5") %>
+          </div>
+        <%% end %>
+      <%% end %>
+    <%% end %>
+
+    <%% if defined?(MissionControl::Jobs::Engine) %>
+      <%%= link_to "<%= options[:prefix] %>/jobs", class: "group block" do %>
+        <%%= render "components/card", css_classes: "transition-shadow hover:shadow-md" do %>
+          <div class="flex items-center gap-4 px-5 py-4">
+            <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <%%= icon_for(:briefcase, class: "size-5") %>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-foreground">Background jobs</div>
+              <div class="text-sm text-muted-foreground">Queues, workers, and recurring tasks</div>
+            </div>
+            <%%= icon_for(:arrow_right, class: "size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5") %>
+          </div>
+        <%% end %>
+      <%% end %>
+    <%% end %>
+  </div>
+</div>
