@@ -31,7 +31,7 @@
     <%%= empty_state(
       title: "No metrics yet",
       description: "Add aggregate counts in BackstageDashboardController#index to populate this overview.",
-      icon: :layout_grid,
+      icon: :layout_dashboard,
       size: :default
     ) %>
   <%% end %>
@@ -44,7 +44,7 @@
         <%%= render "components/card", css_classes: "transition-shadow hover:shadow-md" do %>
           <div class="flex items-center gap-4 px-5 py-4">
             <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <%%= icon_for(:alert_triangle, class: "size-5") %>
+              <%%= icon_for(:triangle_alert, class: "size-5") %>
             </span>
             <div class="min-w-0 flex-1">
               <div class="font-semibold text-foreground">Errors</div>
@@ -61,7 +61,7 @@
         <%%= render "components/card", css_classes: "transition-shadow hover:shadow-md" do %>
           <div class="flex items-center gap-4 px-5 py-4">
             <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <%%= icon_for(:briefcase, class: "size-5") %>
+              <%%= icon_for(:inbox, class: "size-5") %>
             </span>
             <div class="min-w-0 flex-1">
               <div class="font-semibold text-foreground">Background jobs</div>

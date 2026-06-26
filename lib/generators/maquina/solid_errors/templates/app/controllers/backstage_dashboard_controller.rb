@@ -17,8 +17,8 @@ class BackstageDashboardController < BackstageController
     # Add overview metrics here. Each entry renders as a card:
     #
     #   @metrics = [
-    #     {label: "Accounts", icon: :layers, value: Account.count, hint: "tenants"},
-    #     {label: "Users", icon: :users, value: User.count, hint: "members"}
+    #     {label: "Accounts", icon: :folder, value: Account.count, hint: "tenants"},
+    #     {label: "Users", icon: :user, value: User.count, hint: "members"}
     #   ]
     #
     # Keep them aggregate-only. :total and :hint are optional.
