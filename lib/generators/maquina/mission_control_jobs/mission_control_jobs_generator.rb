@@ -49,7 +49,7 @@ module Maquina
 
       # 5. Routes
       def add_route
-        mount_path = "#{options[:prefix]}/mission_control_jobs"
+        mount_path = "#{options[:prefix]}/jobs"
 
         route "mount MissionControl::Jobs::Engine, at: \"#{mount_path}\""
       end

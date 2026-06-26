@@ -90,7 +90,7 @@ module Maquina
 
       # 6. Routes
       def add_route
-        mount_path = "#{options[:prefix]}/solid_errors"
+        mount_path = "#{options[:prefix]}/errors"
 
         route "mount SolidErrors::Engine, at: \"#{mount_path}\""
       end
