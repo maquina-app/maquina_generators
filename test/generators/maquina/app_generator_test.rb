@@ -313,11 +313,13 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
         assert_match(/#{env}_cache\.sqlite3/, content, "Missing cache database for #{env}")
         assert_match(/#{env}_cable\.sqlite3/, content, "Missing cable database for #{env}")
         assert_match(/#{env}_errors\.sqlite3/, content, "Missing errors database for #{env}")
+        assert_match(/#{env}_security\.sqlite3/, content, "Missing security database for #{env}")
       end
       assert_match(/migrations_paths: db\/queue_migrate/, content)
       assert_match(/migrations_paths: db\/cache_migrate/, content)
       assert_match(/migrations_paths: db\/cable_migrate/, content)
       assert_match(/migrations_paths: db\/errors_migrate/, content)
+      assert_match(/migrations_paths: db\/security_migrate/, content)
     end
   end
 
@@ -327,6 +329,7 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_match(/Your Rails app is ready!/, output)
     assert_match(/credentials:edit/, output)
     assert_match(/bin\/dev/, output)
+    assert_match(%r{Security: Rack::Attack refusals at /admin/security}, output)
   end
 
   test "does not install authentication by default" do

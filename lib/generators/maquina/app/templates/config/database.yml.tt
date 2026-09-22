@@ -29,6 +29,10 @@ development:
     <<: *default
     database: storage/development_errors.sqlite3
     migrations_paths: db/errors_migrate
+  security:
+    <<: *default
+    database: storage/development_security.sqlite3
+    migrations_paths: db/security_migrate
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
@@ -53,6 +57,10 @@ test:
     <<: *default
     database: storage/test_errors.sqlite3
     migrations_paths: db/errors_migrate
+  security:
+    <<: *default
+    database: storage/test_security.sqlite3
+    migrations_paths: db/security_migrate
 
 # Store production database in the storage/ directory, which by default
 # is mounted as a persistent Docker volume in config/deploy.yml.
@@ -76,3 +84,7 @@ production:
     <<: *default
     database: storage/production_errors.sqlite3
     migrations_paths: db/errors_migrate
+  security:
+    <<: *default
+    database: storage/production_security.sqlite3
+    migrations_paths: db/security_migrate

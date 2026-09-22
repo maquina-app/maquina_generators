@@ -199,7 +199,6 @@ module Maquina
       def install_maquina_generators
         return unless rails_app?
 
-        generate "maquina:rack_attack", "--quiet"
         generate "maquina:mission_control_jobs", "--prefix", options[:prefix], "--quiet"
         generate "maquina:solid_errors", "--prefix", options[:prefix], "--quiet"
 
@@ -210,6 +209,10 @@ module Maquina
           system("bin/rails generate solid_cable:install", chdir: destination_root)
           system("bin/rails generate maquina_components:install", chdir: destination_root)
         end
+
+        # After solid_queue:install, so config/recurring.yml exists for the purge.
+        # Installs the maquina:rack_attack rules too.
+        generate "maquina:security", "--prefix", options[:prefix], "--quiet"
       end
 
       # 13. Restore custom layouts overwritten by gem installers
@@ -323,7 +326,8 @@ module Maquina
         say "  2. Start the app: bin/dev"
         say ""
         say "Installed components:", :yellow
-        say "  - Rack::Attack: rate limiting and blocklists (config/initializers/rack_attack.rb)"
+        say "  - Rack::Attack: scanner and flood bans, throttles (config/initializers/rack_attack.rb)"
+        say "  - Security: Rack::Attack refusals at #{options[:prefix]}/security"
         say "  - Solid Queue: background jobs (config/solid_queue.yml)"
         say "  - Mission Control Jobs: job dashboard at #{options[:prefix]}/mission_control_jobs"
         say "  - Solid Errors: error tracking at #{options[:prefix]}/solid_errors"

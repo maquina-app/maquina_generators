@@ -1,0 +1,33 @@
+<%# locals: (days:) %>
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "By day" %>
+    <%= render "components/card/description", text: "Zeros kept, so a spike reads against its neighbours." %>
+  <% end %>
+  <%= render "components/card/content", spacing: :full do %>
+    <div class="overflow-x-auto">
+      <%= render "components/table", container: false, "aria-label": "Refusals by day" do %>
+        <%= render "components/table/header" do %>
+          <%= render "components/table/row" do %>
+            <%= render "components/table/head", text: "Day" %>
+            <%= render "components/table/head", text: "Throttled", css_classes: "text-right" %>
+            <%= render "components/table/head", text: "Blocked", css_classes: "text-right" %>
+            <%= render "components/table/head", text: "Banned", css_classes: "text-right" %>
+          <% end %>
+        <% end %>
+        <%= render "components/table/body" do %>
+          <% days.each do |day| %>
+            <%= render "components/table/row" do %>
+              <%= render "components/table/cell" do %>
+                <time datetime="<%= day.date.iso8601 %>"><%= day.date.strftime("%a %-d %b") %></time>
+              <% end %>
+              <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(day.throttled) %>
+              <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(day.blocked) %>
+              <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(day.banned) %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

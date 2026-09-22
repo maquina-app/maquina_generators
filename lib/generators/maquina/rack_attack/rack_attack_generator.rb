@@ -5,6 +5,8 @@ module Maquina
     class RackAttackGenerator < Rails::Generators::Base
       source_root File.expand_path("templates", __dir__)
 
+      class_option :login_path, type: :string, default: "/session",
+        desc: "Path whose POSTs the login throttle counts"
       class_option :quiet, type: :boolean, default: false,
         desc: "Suppress post-install instructions"
 
@@ -42,9 +44,11 @@ module Maquina
         say "Rack::Attack has been installed!", :green
         say ""
         say "Default protections enabled:", :yellow
-        say "  - Blocklist: PHP files, WordPress paths, sensitive files, scanner targets"
+        say "  - Scanner ban: 3 scanner paths (PHP, WordPress, dotfiles, backup archives) in 10 min bans the IP for 7 days"
+        say "  - Flood ban: 600 requests in 5 min bans the IP for 1 day"
+        say "  - Throttle: 300 req/5min per IP, 5 POST #{options[:login_path]}/20s per IP"
         say "  - Safelist: localhost (127.0.0.1, ::1)"
-        say "  - Throttle: 300 req/5min per IP, 5 login attempts/20s per IP"
+        say "  - Every refusal logged as an [ATTACK] line"
         say ""
         say "Customize rules in config/initializers/rack_attack.rb"
         say ""

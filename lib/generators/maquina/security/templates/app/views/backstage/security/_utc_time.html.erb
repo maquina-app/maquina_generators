@@ -1,0 +1,2 @@
+<%# locals: (time:) %>
+<time datetime="<%= time.utc.iso8601 %>" title="<%= time.utc.iso8601 %>" class="whitespace-nowrap tabular-nums"><%= time.utc.strftime("%-d %b %H:%M") %></time>

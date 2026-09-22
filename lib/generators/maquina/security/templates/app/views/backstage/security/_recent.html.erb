@@ -1,0 +1,37 @@
+<%# locals: (events:) %>
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Recent refusals" %>
+    <%= render "components/card/description", text: "The last #{Security::AbuseReport::RECENT_LIMIT}, newest first." %>
+  <% end %>
+  <%= render "components/card/content", spacing: :full do %>
+    <div class="overflow-x-auto">
+      <%= render "components/table", container: false, "aria-label": "Recent refusals" do %>
+        <%= render "components/table/header" do %>
+          <%= render "components/table/row" do %>
+            <%= render "components/table/head", text: "When" %>
+            <%= render "components/table/head", text: "Kind" %>
+            <%= render "components/table/head", text: "Address" %>
+            <%= render "components/table/head", text: "Request" %>
+          <% end %>
+        <% end %>
+        <%= render "components/table/body" do %>
+          <% events.each do |event| %>
+            <%= render "components/table/row" do %>
+              <%= render "components/table/cell" do %>
+                <%= render "backstage/security/utc_time", time: event.created_at %>
+              <% end %>
+              <%= render "components/table/cell" do %>
+                <%= render "components/badge", variant: {"banned" => :destructive, "blocked" => :warning}.fetch(event.kind, :secondary), size: :sm do %><%= event.kind %><% end %>
+              <% end %>
+              <%= render "components/table/cell", css_classes: "font-mono", text: event.ip %>
+              <%= render "components/table/cell", css_classes: "font-mono whitespace-normal break-all" do %>
+                <span class="text-muted-foreground"><%= event.request_method %></span> <%= event.path %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

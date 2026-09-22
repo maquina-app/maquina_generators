@@ -1,0 +1,31 @@
+<%# locals: (hosts:) %>
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Targeted hosts" %>
+    <%= render "components/card/description", text: "Which hostnames the refused requests were aimed at." %>
+  <% end %>
+  <%= render "components/card/content", spacing: :full do %>
+    <% if hosts.empty? %>
+      <%= empty_state(title: "No host recorded.", icon: :check_circle, size: :compact) %>
+    <% else %>
+      <div class="overflow-x-auto">
+        <%= render "components/table", container: false, "aria-label": "Targeted hosts" do %>
+          <%= render "components/table/header" do %>
+            <%= render "components/table/row" do %>
+              <%= render "components/table/head", text: "Host" %>
+              <%= render "components/table/head", text: "Refused", css_classes: "text-right" %>
+            <% end %>
+          <% end %>
+          <%= render "components/table/body" do %>
+            <% hosts.each do |host| %>
+              <%= render "components/table/row" do %>
+                <%= render "components/table/cell", css_classes: "font-mono", text: host.host %>
+                <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(host.count) %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -115,7 +115,7 @@ All generated code lives in your app -- edit it directly:
 - **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
 - **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
 - **Route:** Mounts `SolidErrors::Engine` under a configurable prefix
-- **Admin navigation:** Shared navigation bar linking Solid Errors and Mission Control Jobs dashboards
+- **Admin navigation:** Shared navigation bar linking the Solid Errors, Mission Control Jobs and Security dashboards
 - **Custom layout:** Tailwind-styled layout with admin navigation and toast flash messages
 - **Stimulus controllers:** `clipboard_controller.js` and `backtrace_filter_controller.js`
 - **Custom views:** Tailwind-styled views to override the gem defaults (included by default, use `--no-copy-views` to skip)
@@ -157,7 +157,7 @@ Credentials are resolved in order:
 - **Helper:** `MissionControlHelper` with `job_status_badge_variant` and `nav_icon_for_section`
 - **Initializer:** Sets base controller class, credentials-first auth with ENV variable fallback
 - **Route:** Mounts `MissionControl::Jobs::Engine` under a configurable prefix
-- **Admin navigation:** Shared navigation bar linking Solid Errors and Mission Control Jobs dashboards
+- **Admin navigation:** Shared navigation bar linking the Solid Errors, Mission Control Jobs and Security dashboards
 - **Custom layout:** Tailwind-styled layout with admin navigation, toast flash messages, application/server selection, and tab navigation
 - **Custom views:** Tailwind-styled views for jobs, queues, workers, and recurring tasks (included by default, use `--no-copy-views` to skip)
 
@@ -218,28 +218,74 @@ rails g maquina:solid_queue --database postgresql # PostgreSQL
 
 ### Rack Attack -- Request Protection
 
-**Rack Attack** installs the [rack-attack](https://github.com/rack/rack-attack) gem with default security rules to block common vulnerability scans and throttle abusive requests.
+**Rack Attack** installs the [rack-attack](https://github.com/rack/rack-attack) gem with rules that ban vulnerability scanners and addresses that ignore the throttle.
 
 #### What it generates
 
-- **Initializer:** `config/initializers/rack_attack.rb` with blocklists, safelists, and throttles
+- **Initializer:** `config/initializers/rack_attack.rb` with the bans, throttles, safelist, 403 responder and an `[ATTACK]` log line per refusal. Its knobs are constants on `Rack::Attack` (`SCANNER_*`, `GENERAL_*`, `FLOOD_*`, `LOGIN_*`) and `Rack::Attack.banned?(ip)` answers whether an address is banned now.
 
 #### Usage
 
 ```bash
 rails g maquina:rack_attack
+rails g maquina:rack_attack --login-path /sign_in   # Throttle a different sign-in path
 ```
 
 The generator automatically runs `bundle install`.
 
 #### Default Protections
 
-- **Blocklists:** PHP files (`*.php`), WordPress paths (`wp-admin`, `wp-login`, etc.), sensitive files (`.env`, `.git`, `/etc/passwd`, etc.), scanner targets (`phpmyadmin`, `cgi-bin`, etc.)
+- **Scanner ban (Fail2Ban):** three scanner paths in 10 minutes bans the IP for 7 days. Scanner paths are PHP files (`*.php`), WordPress paths (`wp-admin`, `wp-login`, etc.), sensitive files anywhere in the path (`.env`, `.git`, `/etc/passwd`, etc.), backup archives (`.zip`, `.sql`, `.tar.gz`, `.bak`, etc.) and scanner targets (`phpmyadmin`, `cgi-bin`, etc.). `/rails/active_storage` is exempt.
+- **Flood ban (Allow2Ban):** 600 requests in 5 minutes (twice the general throttle) bans the IP for 1 day.
+- **Throttles:** 300 requests/5min per IP (general; `/assets` and `/rails/active_storage` exempt), 5 `POST /session`/20s per IP
 - **Safelists:** Localhost (`127.0.0.1`, `::1`)
-- **Throttles:** 300 requests/5min per IP (general), 5 login attempts/20s per IP
-- **Responses:** 403 Forbidden for blocklisted, 429 Too Many Requests for throttled
+- **Responses:** 403 Forbidden for blocklisted and banned, 429 Too Many Requests for throttled
 
-Customize rules in `config/initializers/rack_attack.rb`.
+Bans live in `Rails.cache`, so they need a shared cache store (Solid Cache) in production. Customize rules in `config/initializers/rack_attack.rb`. To see the refusals, add `maquina:security`.
+
+---
+
+### Security -- Rack::Attack with an Abuse Dashboard
+
+**Security** records every Rack::Attack refusal in its own database and summarises the last week on a backstage page next to Solid Errors and Mission Control Jobs.
+
+#### What it generates
+
+- **Rack::Attack rules:** runs `maquina:rack_attack` unless `config/initializers/rack_attack.rb` already defines `Rack::Attack.banned?` (an older initializer without it is replaced)
+- **Subscriber:** `config/initializers/rack_attack_events.rb` writes a `Security::AbuseEvent` per throttled, blocked or banned request; a failed write never turns a 403 into a 500
+- **Models:** `Security::Record` (`connects_to` the `security` database), `Security::AbuseEvent` (30-day retention), `Security::AbuseReport` (the page's figures)
+- **Database:** `db/security_schema.rb` and a `security:` entry in every multi-database environment of `config/database.yml` (and `config/database.yml.example`)
+- **Retention:** a daily `purge_abuse_events` task in `config/recurring.yml`
+- **BackstageController**, **controller** (`Backstage::SecurityController`), **route** (`<prefix>/security`), **layout** and **views**: stats, throttled and banned addresses, blocked paths, sign-in throttles, targeted hosts, refusals by day, recent refusals (views skipped with `--no-copy-views`)
+- **Admin navigation:** a Security tab, added to an existing `_admin_navigation` partial too
+
+#### Usage
+
+```bash
+rails g maquina:security --prefix /admin
+bin/rails db:prepare
+```
+
+The generator automatically runs `bundle install`. The page needs maquina_components.
+
+#### Options
+
+```bash
+rails g maquina:security --prefix /admin                      # Default
+rails g maquina:security --prefix /admin --login-path /sign_in  # Different sign-in path
+rails g maquina:security --prefix /admin --no-copy-views      # Without views
+rails g maquina:security --prefix /backstage \
+  --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD  # Custom env vars
+```
+
+#### Authentication
+
+HTTP Basic Auth, with credentials resolved in order:
+
+1. `Rails.application.credentials.backstage.username` / `.password`
+2. `ENV["SECURITY_USER"]` / `ENV["SECURITY_PASSWORD"]` (configurable)
+
+The page answers 503 until one of them is set, so it is never left open.
 
 ---
 

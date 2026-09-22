@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-09-22
+
+### Added
+
+- `maquina:security` generator -- records every Rack::Attack refusal as a `Security::AbuseEvent` in its own `security` database and shows the last week at `<prefix>/security` behind the backstage Basic Auth (503 until credentials are set). Adds the models, `db/security_schema.rb`, the `security:` database entries, a daily purge in `config/recurring.yml`, the controller, layout and views, and a Security tab in the admin navigation.
+- `--login-path` option for `maquina:rack_attack`.
+
+### Changed
+
+- `maquina:rack_attack` now bans instead of only blocking: three scanner paths in 10 minutes bans an IP for 7 days (Fail2Ban), and 600 requests in 5 minutes bans it for 1 day (Allow2Ban). Backup-archive probes (`.zip`, `.sql`, `.tar.gz`, ...) count as scanner paths, sensitive files match anywhere in the path, `/rails/active_storage` is exempt from the scanner rule and the general throttle, and every refusal is logged as an `[ATTACK]` line. The rule names changed from `block-php`/`block-wordpress`/`block-sensitive-files`/`block-scanner-targets` to `fail2ban/scanners` and `allow2ban/flood`.
+- `maquina:app` installs `maquina:security` (which brings the Rack::Attack rules) and its `database.yml` has a `security` database.
+- The admin navigation of `maquina:solid_errors` and `maquina:mission_control_jobs` links the Security page.
+
 ## [0.5.0] - 2026-05-31
 
 ### Added

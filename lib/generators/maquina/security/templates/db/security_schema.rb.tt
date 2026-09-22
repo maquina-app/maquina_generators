@@ -1,0 +1,27 @@
+# The `security` database: Rack::Attack's refusals, one row per throttled,
+# blocked or banned request, written by the subscriber in
+# config/initializers/rack_attack_events.rb and read by the backstage Security
+# page. It is its own database for the same reason Solid Errors has one — a
+# scanner can add a thousand rows in five minutes, and that churn stays out of
+# the primary database the app's real writes contend with. Retention is
+# Security::AbuseEvent::RETENTION, swept by config/recurring.yml.
+#
+# Like the other non-primary databases this file is the whole definition —
+# there is no db/security_migrate directory; `db:prepare` loads it on a fresh
+# database, and a change here bumps the version.
+
+ActiveRecord::Schema[<%= Rails::VERSION::MAJOR %>.<%= Rails::VERSION::MINOR %>].define(version: 1) do
+  create_table "abuse_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "host"
+    t.string "ip", null: false
+    t.string "kind", null: false
+    t.string "path", null: false
+    t.string "request_method", null: false
+    t.string "rule", null: false
+    t.string "user_agent"
+    t.index ["created_at"], name: "index_abuse_events_on_created_at"
+    t.index ["ip", "created_at"], name: "index_abuse_events_on_ip_and_created_at"
+    t.index ["kind", "created_at"], name: "index_abuse_events_on_kind_and_created_at"
+  end
+end

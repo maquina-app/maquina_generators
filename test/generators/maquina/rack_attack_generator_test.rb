@@ -26,44 +26,50 @@ class Maquina::Generators::RackAttackGeneratorTest < Rails::Generators::TestCase
     assert_file "config/initializers/rack_attack.rb"
   end
 
-  test "blocks PHP file requests" do
-    run_generator
-
-    assert_file "config/initializers/rack_attack.rb", /block-php/
-    assert_file "config/initializers/rack_attack.rb", /\.php/
-  end
-
-  test "blocks WordPress paths" do
+  test "bans scanners with fail2ban" do
     run_generator
 
     assert_file "config/initializers/rack_attack.rb" do |content|
-      assert_match(/block-wordpress/, content)
-      assert_match(%r{/wp-admin}, content)
-      assert_match(%r{/wp-login}, content)
-      assert_match(%r{/wp-content}, content)
-      assert_match(%r{/xmlrpc\.php}, content)
+      assert_match(%r{fail2ban/scanners}, content)
+      assert_match(/SCANNER_MAXRETRY = 3/, content)
+      assert_match(/SCANNER_BANTIME = 7\.days/, content)
+      assert_match(/def self\.scanner_path\?/, content)
+      assert_match(/def self\.banned\?/, content)
     end
   end
 
-  test "blocks sensitive file access" do
+  test "treats PHP, WordPress, sensitive files and archives as scanner paths" do
     run_generator
 
     assert_file "config/initializers/rack_attack.rb" do |content|
-      assert_match(/block-sensitive-files/, content)
+      assert_match(/PHP_PATH/, content)
+      assert_match(/ARCHIVE_PATH/, content)
+      assert_match(%r{/wp-admin}, content)
+      assert_match(%r{/xmlrpc\.php}, content)
       assert_match(%r{/\.env}, content)
       assert_match(%r{/\.git}, content)
-      assert_match(%r{/\.htaccess}, content)
       assert_match(%r{/etc/passwd}, content)
+      assert_match(%r{/phpmyadmin}, content)
+      assert_match(%r{/cgi-bin}, content)
     end
   end
 
-  test "blocks scanner targets" do
+  test "exempts Active Storage from scanner paths and the general throttle" do
     run_generator
 
     assert_file "config/initializers/rack_attack.rb" do |content|
-      assert_match(/block-scanner-targets/, content)
-      assert_match(%r{/phpmyadmin}, content)
-      assert_match(%r{/cgi-bin}, content)
+      assert_match(%r{return false if path\.start_with\?\("/rails/active_storage"\)}, content)
+      assert_match(%r{req\.path\.start_with\?\("/assets", "/rails/active_storage"\)}, content)
+    end
+  end
+
+  test "bans floods with allow2ban" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(%r{allow2ban/flood}, content)
+      assert_match(/FLOOD_MAXRETRY = GENERAL_LIMIT \* 2/, content)
+      assert_match(/FLOOD_BANTIME = 1\.day/, content)
     end
   end
 
@@ -82,9 +88,25 @@ class Maquina::Generators::RackAttackGeneratorTest < Rails::Generators::TestCase
 
     assert_file "config/initializers/rack_attack.rb" do |content|
       assert_match(/req\/ip/, content)
-      assert_match(/limit: 300/, content)
+      assert_match(/GENERAL_LIMIT = 300/, content)
       assert_match(/login\/ip/, content)
-      assert_match(/limit: 5/, content)
+      assert_match(/LOGIN_LIMIT = 5/, content)
+      assert_match(%r{LOGIN_PATH = "/session"}, content)
+    end
+  end
+
+  test "throttles a custom login path" do
+    run_generator %w[--login-path /sign_in]
+
+    assert_file "config/initializers/rack_attack.rb", %r{LOGIN_PATH = "/sign_in"}
+  end
+
+  test "logs every refusal" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/subscribe\("rack\.attack"\)/, content)
+      assert_match(/\[ATTACK\]/, content)
     end
   end
 

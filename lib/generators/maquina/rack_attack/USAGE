@@ -3,13 +3,15 @@ Description:
   vulnerability scans and throttle abusive requests.
 
   Default protections:
-    - Blocks PHP file requests (*.php)
-    - Blocks WordPress paths (wp-admin, wp-login, wp-content, etc.)
-    - Blocks sensitive file access (.env, .git, /etc/passwd, etc.)
-    - Blocks common scanner targets (phpmyadmin, cgi-bin, etc.)
+    - Bans an IP for 7 days after 3 scanner paths in 10 minutes: PHP files,
+      WordPress paths, sensitive files (.env, .git, /etc/passwd), backup
+      archives (.zip, .sql, .tar.gz) and common scanner targets
+    - Bans an IP for 1 day after 600 requests in 5 minutes
+    - Throttles general requests (300/5min per IP; assets and Active Storage exempt)
+    - Throttles login attempts (5/20s per IP on POST --login-path)
     - Safelists localhost
-    - Throttles general requests (300/5min per IP)
-    - Throttles login attempts (5/20s per IP)
+    - Logs every refusal as an [ATTACK] line
 
 Examples:
   rails g maquina:rack_attack
+  rails g maquina:rack_attack --login-path /sign_in
