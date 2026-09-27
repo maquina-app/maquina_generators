@@ -96,22 +96,58 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
   test "adds route with prefix" do
     run_generator %w[--prefix /admin]
 
-    assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/admin/solid_errors"}
+    assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/admin/errors"}
   end
 
   test "adds route with custom prefix" do
     run_generator %w[--prefix /backstage]
 
-    assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/backstage/solid_errors"}
+    assert_file "config/routes.rb", %r{mount SolidErrors::Engine, at: "/backstage/errors"}
   end
 
   test "generates admin navigation partial" do
     run_generator %w[--prefix /admin]
 
     assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
-      assert_match(%r{/admin/solid_errors}, content)
-      assert_match(%r{/admin/mission_control_jobs}, content)
+      assert_match(%r{/admin/errors}, content)
+      assert_match(%r{/admin/jobs}, content)
       assert_match(/main_app\.root_path/, content)
+    end
+  end
+
+  test "navigation includes an Overview tab pointing at the prefix root" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
+      assert_match(/<span>Overview<\/span>/, content)
+      assert_match(%r{link_to "/admin",}, content)
+    end
+  end
+
+  test "installs the backstage dashboard" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/controllers/backstage_dashboard_controller.rb" do |content|
+      assert_match(/class BackstageDashboardController < BackstageController/, content)
+      assert_match(/authenticate_or_request_with_http_basic/, content)
+      assert_match(/@metrics = \[\]/, content)
+    end
+    assert_file "app/views/layouts/admin.html.erb", /admin_navigation/
+    assert_file "app/views/backstage_dashboard/index.html.erb" do |content|
+      assert_match(/Overview/, content)
+      assert_match(%r{defined\?\(SolidErrors::Engine\)}, content)
+      assert_match(%r{"/admin/errors"}, content)
+      assert_match(%r{"/admin/jobs"}, content)
+    end
+    assert_file "config/routes.rb", %r{get "/admin" => "backstage_dashboard#index"}
+  end
+
+  test "does not duplicate the dashboard route when run twice" do
+    run_generator %w[--prefix /admin]
+    run_generator %w[--prefix /admin]
+
+    assert_file "config/routes.rb" do |content|
+      assert_equal 1, content.scan("backstage_dashboard#index").length
     end
   end
 
@@ -150,6 +186,25 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "app/views/solid_errors/occurrences/_occurrence.html.erb"
     assert_file "app/views/solid_errors/occurrences/_collection.html.erb"
     assert_file "app/views/solid_errors/occurrences/_backtrace_line.html.erb"
+  end
+
+  test "copies self-contained mailer templates that avoid dashboard-only helpers" do
+    run_generator %w[--prefix /admin]
+
+    %w[
+      app/views/solid_errors/error_mailer/error_occurred.html.erb
+      app/views/solid_errors/error_mailer/error_occurred.text.erb
+    ].each do |path|
+      assert_file path do |content|
+        # The mailer renders without the BackstageController helpers, so these
+        # templates must not reuse the themed dashboard partials or their
+        # icon_for/Stimulus dependencies (the cause of the email render loop).
+        body = content.gsub(/<%#.*?%>/m, "")
+        assert_no_match(/icon_for/, body)
+        assert_no_match(/data-controller/, body)
+        assert_no_match(%r{render\s+["']solid_errors/}, body)
+      end
+    end
   end
 
   test "copies layout with admin navigation and updated title" do

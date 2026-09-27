@@ -97,23 +97,47 @@ class Maquina::Generators::MissionControlJobsGeneratorTest < Rails::Generators::
   test "adds route with prefix" do
     run_generator %w[--prefix /admin]
 
-    assert_file "config/routes.rb", %r{mount MissionControl::Jobs::Engine, at: "/admin/mission_control_jobs"}
+    assert_file "config/routes.rb", %r{mount MissionControl::Jobs::Engine, at: "/admin/jobs"}
   end
 
   test "adds route with custom prefix" do
     run_generator %w[--prefix /backstage]
 
-    assert_file "config/routes.rb", %r{mount MissionControl::Jobs::Engine, at: "/backstage/mission_control_jobs"}
+    assert_file "config/routes.rb", %r{mount MissionControl::Jobs::Engine, at: "/backstage/jobs"}
   end
 
   test "generates admin navigation partial" do
     run_generator %w[--prefix /admin]
 
     assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
-      assert_match(%r{/admin/solid_errors}, content)
-      assert_match(%r{/admin/mission_control_jobs}, content)
+      assert_match(%r{/admin/errors}, content)
+      assert_match(%r{/admin/jobs}, content)
       assert_match(/main_app\.root_path/, content)
     end
+  end
+
+  test "navigation includes an Overview tab pointing at the prefix root" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
+      assert_match(/<span>Overview<\/span>/, content)
+      assert_match(%r{link_to "/admin",}, content)
+    end
+  end
+
+  test "installs the backstage dashboard" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/controllers/backstage_dashboard_controller.rb" do |content|
+      assert_match(/class BackstageDashboardController < BackstageController/, content)
+      assert_match(/authenticate_or_request_with_http_basic/, content)
+    end
+    assert_file "app/views/layouts/admin.html.erb", /admin_navigation/
+    assert_file "app/views/backstage_dashboard/index.html.erb" do |content|
+      assert_match(%r{defined\?\(MissionControl::Jobs::Engine\)}, content)
+      assert_match(%r{"/admin/jobs"}, content)
+    end
+    assert_file "config/routes.rb", %r{get "/admin" => "backstage_dashboard#index"}
   end
 
   test "does not overwrite existing admin navigation" do

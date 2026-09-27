@@ -1,0 +1,65 @@
+<%# locals: () -%>
+<%#
+  Self-contained error-notification email.
+
+  This deliberately does NOT render the shared solid_errors/errors/_error or
+  solid_errors/occurrences/_occurrence partials. This generator themes those
+  partials for the dashboard (Tailwind, Stimulus data-controller, and the
+  maquina_components `icon_for` helper), and they only resolve inside the
+  BackstageController helper context. ActionMailer renders without those helpers,
+  so reusing them raises `undefined method 'icon_for'` on every error email —
+  which SolidErrors then records as a new occurrence and re-mails, a
+  self-amplifying loop. Keep this template plain: inline styles only, no app
+  helpers, no JS, no shared dashboard partials.
+-%>
+<%
+  first_seen = @error.occurrences.minimum(:created_at)
+  last_seen = @error.occurrences.maximum(:created_at)
+  count = @error.occurrences.count
+  fmt = ->(t) { t ? t.strftime("%Y-%m-%d %H:%M:%S %Z") : "—" }
+  cell = "padding:6px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top;font-size:14px;"
+  label = "#{cell}font-weight:600;color:#374151;white-space:nowrap;"
+%>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Solid Errors | <%= @error.exception_class %></title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <div style="max-width:720px;margin:0 auto;padding:24px;">
+    <h1 style="font-size:20px;margin:0 0 4px;">
+      <%= @error.severity_emoji %> <code style="font-family:ui-monospace,Menlo,monospace;"><%= @error.exception_class %></code>
+    </h1>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px;">
+      from <em><%= @error.source %></em> &middot; error #<%= @error.id %>
+    </p>
+
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;font-size:13px;margin:0 0 20px;"><%= @error.message %></pre>
+
+    <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:0 0 20px;">
+      <tr><td style="<%= label %>">Severity</td><td style="<%= cell %>"><%= @error.severity_emoji %> <%= @error.severity %></td></tr>
+      <tr><td style="<%= label %>">Status</td><td style="<%= cell %>"><%= @error.status_emoji %> <%= @error.status %></td></tr>
+      <tr><td style="<%= label %>">Occurrences</td><td style="<%= cell %>"><%= count %></td></tr>
+      <tr><td style="<%= label %>">First seen</td><td style="<%= cell %>"><%= fmt.call(first_seen) %></td></tr>
+      <tr><td style="<%= label %>">Last seen</td><td style="<%= cell %>"><%= fmt.call(last_seen) %></td></tr>
+      <tr><td style="<%= label %>">Source</td><td style="<%= cell %>"><%= @error.source %></td></tr>
+    </table>
+
+    <% if @occurrence.context.present? %>
+      <h2 style="font-size:15px;margin:0 0 8px;">Context</h2>
+      <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:0 0 20px;">
+        <% @occurrence.context.each do |key, value| %>
+          <tr>
+            <td style="<%= label %>"><%= key %></td>
+            <td style="<%= cell %>"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;"><%= value.to_s[0, 2000] %></code></td>
+          </tr>
+        <% end %>
+      </table>
+    <% end %>
+
+    <h2 style="font-size:15px;margin:0 0 8px;">Backtrace <span style="color:#6b7280;font-weight:400;">(<%= fmt.call(@occurrence.created_at) %>)</span></h2>
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;font-size:12px;line-height:1.5;margin:0;overflow-x:auto;"><%= @occurrence.backtrace %></pre>
+  </div>
+</body>
+</html>

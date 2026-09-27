@@ -1,0 +1,30 @@
+<%# locals: () -%>
+<%#
+  Plain-text counterpart to error_occurred.html.erb. Self-contained, no app
+  helpers or themed partials — see the .html.erb comment for the why.
+-%>
+<%
+  first_seen = @error.occurrences.minimum(:created_at)
+  last_seen = @error.occurrences.maximum(:created_at)
+  count = @error.occurrences.count
+  fmt = ->(t) { t ? t.strftime("%Y-%m-%d %H:%M:%S %Z") : "—" }
+-%>
+<%= @error.severity_emoji %> <%= @error.exception_class %>
+from <%= @error.source %> · error #<%= @error.id %>
+
+<%= @error.message %>
+
+Severity:    <%= @error.severity %>
+Status:      <%= @error.status %>
+Occurrences: <%= count %>
+First seen:  <%= fmt.call(first_seen) %>
+Last seen:   <%= fmt.call(last_seen) %>
+Source:      <%= @error.source %>
+<% if @occurrence.context.present? %>
+Context:
+<% @occurrence.context.each do |key, value| -%>
+  <%= key %>: <%= value.to_s[0, 2000] %>
+<% end -%>
+<% end %>
+Backtrace (<%= fmt.call(@occurrence.created_at) %>):
+<%= @occurrence.backtrace %>
