@@ -277,6 +277,18 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_file "app/views/home/index.html.erb", /Tools for Rails developers/
   end
 
+  # The engines mount at <prefix>/errors and <prefix>/jobs, not under their gem names.
+  test "links the admin tools at their mount paths" do
+    run_generator %w[--auth clave]
+
+    assert_file "app/views/home/index.html.erb" do |content|
+      assert_match(%r{"/admin/errors"}, content)
+      assert_match(%r{"/admin/jobs"}, content)
+      assert_match(%r{"/admin/security"}, content)
+      assert_no_match(%r{/admin/(solid_errors|mission_control_jobs)}, content)
+    end
+  end
+
   test "adds root route" do
     run_generator
 
@@ -300,6 +312,10 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_file "README.md" do |content|
       assert_match(/Getting Started/, content)
       assert_match(/bin\/dev/, content)
+      assert_match(%r{/admin/errors \| Errors dashboard}, content)
+      assert_match(%r{/admin/jobs \| Jobs dashboard}, content)
+      assert_match(%r{/admin/security \| Security dashboard}, content)
+      assert_no_match(%r{/admin/(solid_errors|mission_control_jobs)}, content)
     end
   end
 
@@ -313,11 +329,13 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
         assert_match(/#{env}_cache\.sqlite3/, content, "Missing cache database for #{env}")
         assert_match(/#{env}_cable\.sqlite3/, content, "Missing cable database for #{env}")
         assert_match(/#{env}_errors\.sqlite3/, content, "Missing errors database for #{env}")
+        assert_match(/#{env}_security\.sqlite3/, content, "Missing security database for #{env}")
       end
       assert_match(/migrations_paths: db\/queue_migrate/, content)
       assert_match(/migrations_paths: db\/cache_migrate/, content)
       assert_match(/migrations_paths: db\/cable_migrate/, content)
       assert_match(/migrations_paths: db\/errors_migrate/, content)
+      assert_match(/migrations_paths: db\/security_migrate/, content)
     end
   end
 
@@ -327,6 +345,9 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_match(/Your Rails app is ready!/, output)
     assert_match(/credentials:edit/, output)
     assert_match(/bin\/dev/, output)
+    assert_match(%r{Security: Rack::Attack refusals at /admin/security}, output)
+    assert_match(%r{Solid Errors: error tracking at /admin/errors}, output)
+    assert_match(%r{Mission Control Jobs: job dashboard at /admin/jobs}, output)
   end
 
   test "does not install authentication by default" do

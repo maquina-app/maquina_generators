@@ -34,15 +34,17 @@ Your app will be running at **http://localhost:<%= options[:port] %>**.
 | **WebSockets** | Solid Cable |
 | **Rich Text** | Action Text |
 | **File Storage** | Active Storage (S3-ready in production) |
-| **Multi-database** | Separate databases for queue, cache, cable, and errors |
+| **Multi-database** | Separate databases for queue, cache, cable, errors, and security |
 
 ## Development URLs
 
 | URL | Description |
 |-----|-------------|
 | http://localhost:<%= options[:port] %> | Application |
-| http://localhost:<%= options[:port] %><%= options[:prefix] %>/mission_control_jobs | Jobs dashboard |
-| http://localhost:<%= options[:port] %><%= options[:prefix] %>/solid_errors | Errors dashboard |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %> | Admin overview |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %>/errors | Errors dashboard |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %>/jobs | Jobs dashboard |
+| http://localhost:<%= options[:port] %><%= options[:prefix] %>/security | Security dashboard |
 <% if options[:auth] != "none" -%>
 | http://localhost:<%= options[:port] %>/session/new | Sign in |
 <% if options[:auth] == "registration" -%>
@@ -65,7 +67,7 @@ Edit credentials with:
 bin/rails credentials:edit
 ```
 
-Add backstage credentials for the jobs and errors dashboards:
+Add backstage credentials for the admin dashboards (overview, errors, jobs, security):
 
 ```yaml
 backstage:

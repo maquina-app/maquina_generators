@@ -1,0 +1,15 @@
+Description:
+  Records every Rack::Attack refusal as a Security::AbuseEvent in its own
+  `security` database and shows the last week on a backstage page.
+
+  Installs the maquina:rack_attack rules unless the initializer already
+  defines Rack::Attack.banned?, plus the recording subscriber, models,
+  db/security_schema.rb, the `security` database entries, a daily purge in
+  config/recurring.yml, and the controller, layout, views, route and admin
+  navigation tab. The page is behind the backstage Basic Auth and answers
+  503 until credentials are set.
+
+Examples:
+  rails g maquina:security --prefix /admin
+  rails g maquina:security --prefix /admin --login-path /sign_in
+  rails g maquina:security --prefix /admin --no-copy-views

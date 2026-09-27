@@ -1,0 +1,47 @@
+<% content_for :title, "Security" %>
+<%# Rack::Attack's last week, top five of each. Every number is read from
+    Security::AbuseEvent through Security::AbuseReport; the page holds no
+    arithmetic of its own. Times are UTC: a log reads better in one clock. %>
+<div class="py-8 space-y-8">
+  <div>
+    <h1 class="text-2xl text-foreground">Security</h1>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Requests Rack::Attack refused in the last <%= @report.window.inspect %>, kept for <%= Security::AbuseEvent::RETENTION.inspect %>. Times are UTC.
+    </p>
+  </div>
+
+  <% if @report.empty? %>
+    <%= empty_state(title: "Nothing refused this week",
+          description: "No request has been throttled or blocked in the last #{@report.window.inspect}.",
+          icon: :check_circle, size: :default) %>
+  <% else %>
+    <%# Built-in icon names only: the stats card renders through
+        `builtin_icon_for`, which never consults the app's override set. %>
+    <%= render "components/stats/stats_grid", columns: 4, cards: [
+          {title: "Refused requests", value: number_with_delimiter(@report.total), icon: :slash},
+          {title: "Throttled", value: number_with_delimiter(@report.throttled_total), icon: :clock},
+          {title: "Blocked or banned", value: number_with_delimiter(@report.blocked_total), icon: :triangle_alert},
+          {title: "Addresses", value: number_with_delimiter(@report.addresses_total), icon: :users}
+        ] %>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <%= render "backstage/security/addresses", title: "Throttled addresses",
+            description: "Over the general and sign-in limits, busiest first.",
+            addresses: @report.throttled_addresses, empty: "No address was throttled." %>
+
+      <%= render "backstage/security/blocked", addresses: @report.blocked_addresses %>
+
+      <%= render "backstage/security/paths", paths: @report.scanner_paths %>
+
+      <%= render "backstage/security/addresses", title: "Sign-in throttles",
+            description: "Addresses refused on POST #{Rack::Attack::LOGIN_PATH} — #{Rack::Attack::LOGIN_LIMIT} attempts in #{Rack::Attack::LOGIN_PERIOD.inspect}.",
+            addresses: @report.sign_in_throttles, empty: "No one has been throttled on sign-in." %>
+
+      <%= render "backstage/security/hosts", hosts: @report.targeted_hosts %>
+
+      <%= render "backstage/security/by_day", days: @report.by_day %>
+    </div>
+
+    <%= render "backstage/security/recent", events: @report.recent %>
+  <% end %>
+</div>

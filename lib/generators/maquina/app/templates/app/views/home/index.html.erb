@@ -32,17 +32,17 @@
 <%% if authenticated? %>
   <section class="max-w-5xl mx-auto px-5 py-12">
     <p class="text-sm font-semibold uppercase tracking-wider text-primary mb-4">Admin Tools</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <%%= render "components/card" do %>
         <%%= render "components/card/header" do %>
           <div class="flex items-center gap-2">
-            <%%= icon_for(:activity, class: "size-5 text-primary") %>
+            <%%= icon_for(:triangle_alert, class: "size-5 text-primary") %>
             <%%= render "components/card/title", text: "Solid Errors" %>
           </div>
           <%%= render "components/card/description", text: "Browse, resolve, and clean up application exceptions in real time." %>
         <%% end %>
         <%%= render "components/card/footer" do %>
-          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/solid_errors", data: { component: "button", variant: "outline", size: "sm" } %>
+          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/errors", data: { component: "button", variant: "outline", size: "sm" } %>
         <%% end %>
       <%% end %>
 
@@ -55,7 +55,20 @@
           <%%= render "components/card/description", text: "Monitor queues, retry failed jobs, and manage background processing." %>
         <%% end %>
         <%%= render "components/card/footer" do %>
-          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/mission_control_jobs", data: { component: "button", variant: "outline", size: "sm" } %>
+          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/jobs", data: { component: "button", variant: "outline", size: "sm" } %>
+        <%% end %>
+      <%% end %>
+
+      <%%= render "components/card" do %>
+        <%%= render "components/card/header" do %>
+          <div class="flex items-center gap-2">
+            <%%= icon_for(:slash, class: "size-5 text-primary") %>
+            <%%= render "components/card/title", text: "Security" %>
+          </div>
+          <%%= render "components/card/description", text: "See what Rack::Attack throttled, blocked, and banned this week." %>
+        <%% end %>
+        <%%= render "components/card/footer" do %>
+          <%%= link_to "Open Dashboard", "<%= options[:prefix] %>/security", data: { component: "button", variant: "outline", size: "sm" } %>
         <%% end %>
       <%% end %>
     </div>
@@ -109,7 +122,7 @@
         <%%= render "components/card/title", text: "Rate Limiting" %>
       <%% end %>
       <%%= render "components/card/content" do %>
-        <p class="text-sm text-muted-foreground">Rack::Attack configured with blocklists and throttles. Protect login, registration, and API endpoints.</p>
+        <p class="text-sm text-muted-foreground">Rack::Attack bans scanners and floods and throttles sign-in. Every refusal shows on the Security dashboard.</p>
       <%% end %>
     <%% end %>
 

@@ -9,6 +9,7 @@
 class BackstageDashboardController < BackstageController
   layout "admin"
 
+  before_action :require_backstage_credentials
   before_action :authenticate_backstage
 
   def index
@@ -27,9 +28,14 @@ class BackstageDashboardController < BackstageController
 
   private
 
-  # Same backstage credentials the engines use. The inherited
-  # require_backstage_credentials guard already fails closed (503) when
-  # credentials.backstage is absent, so this only has to compare.
+  # Closed (503) until credentials.backstage is set. Without this an unset
+  # username and password are both "", and an empty Basic header matches them.
+  def require_backstage_credentials
+    backstage = Rails.application.credentials.backstage || {}
+    head :service_unavailable if backstage[:username].blank? || backstage[:password].blank?
+  end
+
+  # Same backstage credentials the engines use.
   def authenticate_backstage
     authenticate_or_request_with_http_basic("Admin") do |username, password|
       backstage = Rails.application.credentials.backstage || {}

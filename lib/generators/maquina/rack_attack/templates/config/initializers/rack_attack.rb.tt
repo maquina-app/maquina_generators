@@ -2,6 +2,12 @@
 
 # Rack::Attack configuration
 # https://github.com/rack/rack-attack
+#
+# Coarse scanner-blocking only; per-action throttling belongs in controllers
+# via `rate_limit`. Counters and bans live in Rails.cache (Solid Cache in
+# production), so `SolidCache::Entry.where("key LIKE '%rack::attack%'")` is
+# the forensic record — the middleware answers before Rails, so nothing here
+# reaches the request log except through the subscriber at the bottom.
 
 # Safelist localhost
 Rack::Attack.safelist("allow-localhost") do |req|
@@ -9,66 +15,124 @@ Rack::Attack.safelist("allow-localhost") do |req|
 end
 
 # ---------------------------------------------------------------------------
-# Blocklists — common vulnerability scanner paths
+# Blocklist — common vulnerability scanner paths, with a ban
 # ---------------------------------------------------------------------------
+#
+# A scanner sprays hundreds of guesses in a couple of minutes (a thousand
+# WordPress REST probes in under five minutes from one address is ordinary).
+# Refusing the matching path alone lets every other guess through to routing
+# until the general throttle catches up, so the third scanner path bans the IP
+# for a week — long enough to outlast a rented scanner host, short enough that
+# a reassigned cloud address is not refused for the next tenant.
+#
+# Backup-archive guesses count as scanner paths too (`/<word>.zip` by the
+# hundred in a few seconds). Files the app really serves live under
+# /rails/active_storage, so that prefix is exempt.
 
-# Block PHP file requests
-Rack::Attack.blocklist("block-php") do |req|
-  req.path.match?(/\.php\d?$/i)
+class Rack::Attack
+  # PHP file requests
+  PHP_PATH = /\.php\d?$/i
+
+  # Backup and dump guesses (`/backup.zip`, `/db.sql.gz`, `/site.tar.gz`)
+  ARCHIVE_PATH = /\.(zip|rar|7z|tar|tgz|gz|bz2|xz|sql|bak|backup|old)$/i
+
+  # WordPress paths
+  WORDPRESS_PATHS = %w[
+    /wp-admin
+    /wp-login
+    /wp-content
+    /wp-includes
+    /wp-json
+    /xmlrpc.php
+    /wp-config
+    /wp-cron
+  ].freeze
+
+  # Sensitive file access — anywhere in the path, since scanners probe them behind
+  # prefixes too (`/@fs/.env`, `/wp/.git/config`)
+  SENSITIVE_PATTERNS = %w[
+    /.env
+    /.git
+    /.htaccess
+    /.htpasswd
+    /.aws
+    /.ssh
+    /.svn
+  ].freeze
+
+  # Common scanner targets
+  SCANNER_PATHS = %w[
+    /cgi-bin
+    /phpmyadmin
+    /pma
+    /myadmin
+    /phpinfo
+    /mysqladmin
+    /admin/config.php
+    /solr/
+    /actuator
+    /telescope/requests
+    /debug
+    /_ignition
+    /vendor/phpunit
+  ].freeze
+
+  # The scanner ban's three knobs.
+  SCANNER_MAXRETRY = 3
+  SCANNER_FINDTIME = 10.minutes
+  SCANNER_BANTIME = 7.days
+
+  # An address still sending at twice the general throttle's limit has ignored
+  # every 429 since it hit the limit: banned for a day. A day rather than the
+  # scanner's week because a shared address (office, carrier NAT) can land here.
+  GENERAL_LIMIT = 300
+  GENERAL_PERIOD = 5.minutes
+  FLOOD_MAXRETRY = GENERAL_LIMIT * 2
+  FLOOD_BANTIME = 1.day
+
+  # Sign-in throttle.
+  LOGIN_PATH = "<%= options[:login_path] %>"
+  LOGIN_LIMIT = 5
+  LOGIN_PERIOD = 20.seconds
+
+  def self.scanner_path?(path)
+    path = path.downcase.squeeze("/")
+    return false if path.start_with?("/rails/active_storage")
+
+    path.match?(PHP_PATH) ||
+      path.match?(ARCHIVE_PATH) ||
+      WORDPRESS_PATHS.any? { |prefix| path.start_with?(prefix) } ||
+      SENSITIVE_PATTERNS.any? { |dotfile| path.include?(dotfile) } ||
+      path.include?("/etc/passwd") ||
+      path.include?("/etc/shadow") ||
+      SCANNER_PATHS.any? { |prefix| path.start_with?(prefix) }
+  end
+
+  # What the general throttle and the flood ban count: every request but
+  # assets and Active Storage, by IP.
+  def self.counted_ip(req)
+    req.ip unless req.path.start_with?("/assets", "/rails/active_storage")
+  end
+
+  def self.banned?(ip)
+    Fail2Ban.banned?("scanner:#{ip}") || Allow2Ban.banned?("flood:#{ip}")
+  end
 end
 
-# Block WordPress paths
-WORDPRESS_PATHS = %w[
-  /wp-admin
-  /wp-login
-  /wp-content
-  /wp-includes
-  /xmlrpc.php
-  /wp-config
-  /wp-cron
-].freeze
-
-Rack::Attack.blocklist("block-wordpress") do |req|
-  WORDPRESS_PATHS.any? { |path| req.path.downcase.start_with?(path) }
+Rack::Attack.blocklist("fail2ban/scanners") do |req|
+  Rack::Attack::Fail2Ban.filter("scanner:#{req.ip}",
+    maxretry: Rack::Attack::SCANNER_MAXRETRY, findtime: Rack::Attack::SCANNER_FINDTIME, bantime: Rack::Attack::SCANNER_BANTIME) do
+    Rack::Attack.scanner_path?(req.path)
+  end
 end
 
-# Block sensitive file access
-SENSITIVE_PATTERNS = %w[
-  /.env
-  /.git
-  /.htaccess
-  /.htpasswd
-  /.aws
-  /.ssh
-  /.svn
-].freeze
-
-Rack::Attack.blocklist("block-sensitive-files") do |req|
-  path = req.path.downcase
-  SENSITIVE_PATTERNS.any? { |pattern| path.start_with?(pattern) } ||
-    path.include?("/etc/passwd") ||
-    path.include?("/etc/shadow")
-end
-
-# Block common scanner targets
-SCANNER_PATHS = %w[
-  /cgi-bin
-  /phpmyadmin
-  /pma
-  /myadmin
-  /phpinfo
-  /mysqladmin
-  /admin/config.php
-  /solr/
-  /actuator
-  /telescope/requests
-  /debug
-  /_ignition
-  /vendor/phpunit
-].freeze
-
-Rack::Attack.blocklist("block-scanner-targets") do |req|
-  SCANNER_PATHS.any? { |path| req.path.downcase.start_with?(path) }
+# Blocklists run before throttles, so this counts the requests the throttle
+# goes on to refuse as well.
+Rack::Attack.blocklist("allow2ban/flood") do |req|
+  if (ip = Rack::Attack.counted_ip(req))
+    Rack::Attack::Allow2Ban.filter("flood:#{ip}",
+      maxretry: Rack::Attack::FLOOD_MAXRETRY, findtime: Rack::Attack::GENERAL_PERIOD, bantime: Rack::Attack::FLOOD_BANTIME) { true }
+  end
 end
 
 # ---------------------------------------------------------------------------
@@ -76,13 +140,17 @@ end
 # ---------------------------------------------------------------------------
 
 # General rate limit: 300 requests per 5 minutes per IP
-Rack::Attack.throttle("req/ip", limit: 300, period: 5.minutes) do |req|
-  req.ip unless req.path.start_with?("/assets")
+#
+# Active Storage is exempt alongside /assets. A page of proxied images is dozens
+# of requests, and a refusal there renders as a broken image. Every one of those
+# requests is already gated by an unguessable signed id.
+Rack::Attack.throttle("req/ip", limit: Rack::Attack::GENERAL_LIMIT, period: Rack::Attack::GENERAL_PERIOD) do |req|
+  Rack::Attack.counted_ip(req)
 end
 
 # Login throttle: 5 attempts per 20 seconds per IP
-Rack::Attack.throttle("login/ip", limit: 5, period: 20.seconds) do |req|
-  req.ip if req.path == "/session" && req.post?
+Rack::Attack.throttle("login/ip", limit: Rack::Attack::LOGIN_LIMIT, period: Rack::Attack::LOGIN_PERIOD) do |req|
+  req.ip if req.path == Rack::Attack::LOGIN_PATH && req.post?
 end
 
 # ---------------------------------------------------------------------------
@@ -92,4 +160,18 @@ end
 # Return 403 Forbidden for blocklisted requests
 Rack::Attack.blocklisted_responder = lambda do |_request|
   [403, {"content-type" => "text/plain"}, ["Forbidden\n"]]
+end
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+# Every refused request is logged with its IP — the only trace it leaves in the
+# app's log. Safelist matches stay silent.
+ActiveSupport::Notifications.subscribe("rack.attack") do |_name, _start, _finish, _id, payload|
+  req = payload[:request]
+  match_type = req.env["rack.attack.match_type"]
+  next unless %i[blocklist throttle].include?(match_type)
+
+  Rails.logger.warn "[ATTACK] #{match_type} #{req.env["rack.attack.matched"]} #{req.ip} #{req.request_method} #{req.path}"
 end

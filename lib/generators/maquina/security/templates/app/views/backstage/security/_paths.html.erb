@@ -1,0 +1,33 @@
+<%# locals: (paths:) %>
+<%= render "components/card" do %>
+  <%= render "components/card/header" do %>
+    <%= render "components/card/title", text: "Most requested blocked paths" %>
+    <%= render "components/card/description", text: "What the scanners were after." %>
+  <% end %>
+  <%= render "components/card/content", spacing: :full do %>
+    <% if paths.empty? %>
+      <%= empty_state(title: "No scanner path was requested.", icon: :check_circle, size: :compact) %>
+    <% else %>
+      <div class="overflow-x-auto">
+        <%= render "components/table", container: false, "aria-label": "Most requested blocked paths" do %>
+          <%= render "components/table/header" do %>
+            <%= render "components/table/row" do %>
+              <%= render "components/table/head", text: "Path" %>
+              <%= render "components/table/head", text: "Requests", css_classes: "text-right" %>
+              <%= render "components/table/head", text: "Addresses", css_classes: "text-right" %>
+            <% end %>
+          <% end %>
+          <%= render "components/table/body" do %>
+            <% paths.each do |path| %>
+              <%= render "components/table/row" do %>
+                <%= render "components/table/cell", css_classes: "font-mono whitespace-normal break-all", text: path.path %>
+                <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(path.count) %>
+                <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(path.addresses) %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

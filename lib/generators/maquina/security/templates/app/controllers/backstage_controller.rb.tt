@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+class BackstageController < ActionController::Base
+  helper MaquinaComponents::IconsHelper
+  helper MaquinaComponents::EmptyHelper
+  helper MaquinaComponentsHelper
+end
