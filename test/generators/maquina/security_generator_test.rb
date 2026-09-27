@@ -274,9 +274,57 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
     run_generator %w[--prefix /admin]
 
     assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
-      assert_match(%r{/admin/solid_errors}, content)
-      assert_match(%r{/admin/mission_control_jobs}, content)
-      assert_match(%r{/admin/security}, content)
+      assert_match(/<span>Overview<\/span>/, content)
+      assert_match(%r{"/admin/errors"}, content)
+      assert_match(%r{"/admin/jobs"}, content)
+      assert_match(%r{"/admin/security"}, content)
+    end
+  end
+
+  # The Overview tab points at the prefix root, so a standalone install needs
+  # the dashboard behind it.
+  test "installs the backstage dashboard with a Security card" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/controllers/backstage_dashboard_controller.rb" do |content|
+      assert_match(/class BackstageDashboardController < BackstageController/, content)
+      assert_match(/before_action :require_backstage_credentials\n\s+before_action :authenticate_backstage/, content)
+      assert_match(/head :service_unavailable/, content)
+    end
+    assert_file "app/views/layouts/admin.html.erb", /admin_navigation/
+    assert_file "app/views/backstage_dashboard/index.html.erb" do |content|
+      assert_match(/defined\?\(Security::AbuseEvent\)/, content)
+      assert_match(%r{"/admin/security"}, content)
+    end
+    assert_file "config/routes.rb", %r{get "/admin" => "backstage_dashboard#index"}
+  end
+
+  test "does not duplicate the dashboard route when run twice" do
+    run_generator %w[--prefix /admin]
+    run_generator %w[--prefix /admin]
+
+    assert_file "config/routes.rb" do |content|
+      assert_equal 1, content.scan("backstage_dashboard#index").length
+    end
+  end
+
+  # solid_errors, mission_control_jobs and security each ship the shared admin
+  # navigation and dashboard; whichever runs first writes them, so they must match.
+  test "ships the same shared backstage templates as the other dashboards" do
+    generators = File.expand_path("../../../lib/generators/maquina", __dir__)
+    shared = %w[
+      app/views/layouts/_admin_navigation.html.erb.tt
+      app/views/layouts/admin.html.erb
+      app/controllers/backstage_dashboard_controller.rb
+      app/views/backstage_dashboard/index.html.erb.tt
+    ]
+
+    shared.each do |path|
+      ours = File.read(File.join(generators, "security/templates", path))
+      %w[solid_errors mission_control_jobs].each do |other|
+        assert_equal File.read(File.join(generators, other, "templates", path)), ours,
+          "#{path} differs between security and #{other}"
+      end
     end
   end
 

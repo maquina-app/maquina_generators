@@ -72,5 +72,22 @@
         <%% end %>
       <%% end %>
     <%% end %>
+
+    <%% if defined?(Security::AbuseEvent) %>
+      <%%= link_to "<%= options[:prefix] %>/security", class: "group block" do %>
+        <%%= render "components/card", css_classes: "transition-shadow hover:shadow-md" do %>
+          <div class="flex items-center gap-4 px-5 py-4">
+            <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <%%= icon_for(:slash, class: "size-5") %>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-foreground">Security</div>
+              <div class="text-sm text-muted-foreground">Throttled, blocked, and banned requests</div>
+            </div>
+            <%%= icon_for(:arrow_right, class: "size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5") %>
+          </div>
+        <%% end %>
+      <%% end %>
+    <%% end %>
   </div>
 </div>

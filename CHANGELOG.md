@@ -8,12 +8,16 @@ All notable changes to this project will be documented in this file.
 
 - `maquina:security` generator -- records every Rack::Attack refusal as a `Security::AbuseEvent` in its own `security` database and shows the last week at `<prefix>/security` behind the backstage Basic Auth (503 until credentials are set): throttled and blocked addresses (banned now, expired or not banned), the scanner paths requested, sign-in throttles, targeted hosts, refusals by day and the latest refusals. Adds the models, `db/security_schema.rb`, the `security:` database entries, a daily purge in `config/recurring.yml`, the controller, layout and views, and a Security tab in the admin navigation.
 - `--login-path` option for `maquina:rack_attack`.
+- An admin overview at the backstage prefix root (`BackstageDashboardController`, `admin` layout), installed by `maquina:solid_errors`, `maquina:mission_control_jobs` and `maquina:security`. It links each installed dashboard and has a `@metrics` slot for aggregate counts. An Overview tab leads the admin navigation.
+- Self-contained Solid Errors mailer templates (`error_occurred.html.erb` / `.text.erb`), so `send_emails` is safe to turn on.
 
 ### Changed
 
 - `maquina:rack_attack` now bans instead of only blocking: three scanner paths in 10 minutes bans an IP for 7 days (Fail2Ban), and 600 requests in 5 minutes bans it for 1 day (Allow2Ban). Backup-archive probes (`.zip`, `.sql`, `.tar.gz`, ...) count as scanner paths, sensitive files match anywhere in the path, `/rails/active_storage` is exempt from the scanner rule and the general throttle, and every refusal is logged as an `[ATTACK]` line. The rule names changed from `block-php`/`block-wordpress`/`block-sensitive-files`/`block-scanner-targets` to `fail2ban/scanners` and `allow2ban/flood`.
 - `maquina:app` installs `maquina:security` (which brings the Rack::Attack rules) and its `database.yml` has a `security` database.
 - The admin navigation of `maquina:solid_errors` and `maquina:mission_control_jobs` links the Security page.
+- Solid Errors mounts at `<prefix>/errors` and Mission Control Jobs at `<prefix>/jobs`, instead of `<prefix>/solid_errors` and `<prefix>/mission_control_jobs`. The app generator's home page, README and post-install message use the new paths.
+- The admin navigation and overview use icons maquina-components ships with a `class` attribute (`triangle_alert`, `inbox`, `layout_dashboard`), so none renders blank or oversized.
 
 ### Fixed
 

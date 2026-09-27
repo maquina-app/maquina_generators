@@ -114,8 +114,10 @@ All generated code lives in your app -- edit it directly:
 
 - **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
 - **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
-- **Route:** Mounts `SolidErrors::Engine` under a configurable prefix
-- **Admin navigation:** Shared navigation bar linking the Solid Errors, Mission Control Jobs and Security dashboards
+- **Route:** Mounts `SolidErrors::Engine` at `<prefix>/errors`
+- **Mailer templates:** Self-contained `error_occurred` HTML and text templates, so `send_emails` works without the dashboard's helpers
+- **Admin navigation:** Shared navigation bar with Overview, Errors, Jobs and Security tabs
+- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; answers 503 until backstage credentials are set
 - **Custom layout:** Tailwind-styled layout with admin navigation and toast flash messages
 - **Stimulus controllers:** `clipboard_controller.js` and `backtrace_filter_controller.js`
 - **Custom views:** Tailwind-styled views to override the gem defaults (included by default, use `--no-copy-views` to skip)
@@ -156,8 +158,9 @@ Credentials are resolved in order:
 - **BackstageController:** Inherits from `ActionController::Base` with maquina_components helpers (bypasses app's ApplicationController concerns)
 - **Helper:** `MissionControlHelper` with `job_status_badge_variant` and `nav_icon_for_section`
 - **Initializer:** Sets base controller class, credentials-first auth with ENV variable fallback
-- **Route:** Mounts `MissionControl::Jobs::Engine` under a configurable prefix
-- **Admin navigation:** Shared navigation bar linking the Solid Errors, Mission Control Jobs and Security dashboards
+- **Route:** Mounts `MissionControl::Jobs::Engine` at `<prefix>/jobs`
+- **Admin navigation:** Shared navigation bar with Overview, Errors, Jobs and Security tabs
+- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; answers 503 until backstage credentials are set
 - **Custom layout:** Tailwind-styled layout with admin navigation, toast flash messages, application/server selection, and tab navigation
 - **Custom views:** Tailwind-styled views for jobs, queues, workers, and recurring tasks (included by default, use `--no-copy-views` to skip)
 
@@ -258,6 +261,7 @@ Bans live in `Rails.cache`, so they need a shared cache store (Solid Cache) in p
 - **Retention:** a daily `purge_abuse_events` task in `config/recurring.yml`
 - **BackstageController**, **controller** (`Backstage::SecurityController`), **route** (`<prefix>/security`), **layout** and **views**: stats, throttled addresses, blocked addresses (banned now, expired or not yet banned), scanner paths, sign-in throttles, targeted hosts, refusals by day, recent refusals (views skipped with `--no-copy-views`)
 - **Admin navigation:** a Security tab, added to an existing `_admin_navigation` partial too
+- **Admin overview:** the shared dashboard at the prefix root, if Solid Errors or Mission Control Jobs have not installed it already
 
 #### What the page shows
 
