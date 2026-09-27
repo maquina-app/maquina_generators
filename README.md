@@ -259,6 +259,19 @@ Bans live in `Rails.cache`, so they need a shared cache store (Solid Cache) in p
 - **BackstageController**, **controller** (`Backstage::SecurityController`), **route** (`<prefix>/security`), **layout** and **views**: stats, throttled addresses, blocked addresses (banned now, expired or not yet banned), scanner paths, sign-in throttles, targeted hosts, refusals by day, recent refusals (views skipped with `--no-copy-views`)
 - **Admin navigation:** a Security tab, added to an existing `_admin_navigation` partial too
 
+#### What the page shows
+
+The last 7 days of refusals, top five of each, read from `Security::AbuseEvent` through `Security::AbuseReport`. It is a briefing, not a log viewer: no filters, no pagination. Times are UTC.
+
+- **Stats:** refused requests, throttled, blocked or banned, and distinct addresses
+- **Throttled addresses:** over the general or sign-in limit, busiest first, with the rules they hit
+- **Blocked addresses:** every address a blocklist refused, marked **Banned now** (Rack::Attack's own answer at render time), **Expired**, or **Not banned** -- an address with a strike or two on the scanner rule, or a slow scanner that stays under three paths in ten minutes
+- **Most requested blocked paths:** what the scanners were after. A banned address is refused on every path, its ordinary pages included, so only the paths `Rack::Attack.scanner_path?` recognises are listed
+- **Sign-in throttles:** addresses refused on `POST <login-path>`, kept apart so scanner noise never buries them
+- **Targeted hosts:** which hostnames the refusals were aimed at
+- **By day:** throttled, blocked and banned per day, zeros kept so a spike reads against its neighbours
+- **Recent refusals:** the last 20, newest first
+
 #### Usage
 
 ```bash
@@ -287,6 +300,22 @@ HTTP Basic Auth, with credentials resolved in order:
 
 The page answers 503 until one of them is set, so it is never left open.
 
+#### Trying it locally
+
+Localhost is safelisted, so your own requests are never refused. Rack::Attack trusts `X-Forwarded-For` from `127.0.0.1`, so send one to stand in for another address:
+
+```bash
+for path in /wp-login.php /.env /backup.zip /; do
+  curl -s -o /dev/null -w "%{http_code} $path\n" -H "X-Forwarded-For: 203.0.113.10" http://localhost:3000$path
+done
+# 403 /wp-login.php
+# 403 /.env
+# 403 /backup.zip   <- third scanner path: banned for 7 days
+# 403 /             <- banned, so every path is refused
+```
+
+Development's `:memory_store` keeps bans inside the server process, so they reset on restart and a `bin/rails runner` script cannot see them. Production needs a shared store (Solid Cache).
+
 ---
 
 ### App -- Full Application Setup (Orchestrator)
@@ -305,10 +334,10 @@ The page answers 503 until one of them is set, so it is never left open.
 8. Sets up ActiveStorage JavaScript imports
 9. Adds turbo morphing, `yield :head`, and simplifies `<main>` tag in layout
 10. Optionally installs authentication (`maquina:clave` or `maquina:registration`)
-11. Invokes sub-generators: `maquina:rack_attack`, `maquina:mission_control_jobs`, `maquina:solid_errors`
-12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`
+11. Invokes sub-generators: `maquina:mission_control_jobs`, `maquina:solid_errors`
+12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`, then `maquina:security` (which installs the `maquina:rack_attack` rules)
 13. Restores custom layouts overwritten by gem installers
-14. Configures multi-database `database.yml` (primary, queue, cache, cable, errors)
+14. Configures multi-database `database.yml` (primary, queue, cache, cable, errors, security)
 15. Creates a HomeController with root route
 16. Generates a README and `database.yml.example`
 17. Runs `db:prepare`
@@ -323,7 +352,7 @@ rails g maquina:app --auth registration
 
 #### Options
 
-- `--prefix` (default: `/admin`) -- Base path prefix for backstage tools (Solid Errors, Mission Control Jobs)
+- `--prefix` (default: `/admin`) -- Base path prefix for backstage tools (Solid Errors, Mission Control Jobs, Security)
 - `--port` (default: `3000`) -- Default port for the development server
 - `--auth` (default: `none`) -- Authentication type: `none`, `clave`, or `registration`
 

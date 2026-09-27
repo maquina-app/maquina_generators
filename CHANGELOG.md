@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.0] - 2026-09-22
+## [0.6.0] - 2026-09-26
 
 ### Added
 
-- `maquina:security` generator -- records every Rack::Attack refusal as a `Security::AbuseEvent` in its own `security` database and shows the last week at `<prefix>/security` behind the backstage Basic Auth (503 until credentials are set). Adds the models, `db/security_schema.rb`, the `security:` database entries, a daily purge in `config/recurring.yml`, the controller, layout and views, and a Security tab in the admin navigation.
+- `maquina:security` generator -- records every Rack::Attack refusal as a `Security::AbuseEvent` in its own `security` database and shows the last week at `<prefix>/security` behind the backstage Basic Auth (503 until credentials are set): throttled and blocked addresses (banned now, expired or not banned), the scanner paths requested, sign-in throttles, targeted hosts, refusals by day and the latest refusals. Adds the models, `db/security_schema.rb`, the `security:` database entries, a daily purge in `config/recurring.yml`, the controller, layout and views, and a Security tab in the admin navigation.
 - `--login-path` option for `maquina:rack_attack`.
 
 ### Changed
