@@ -29,9 +29,9 @@
             description: "Over the general and sign-in limits, busiest first.",
             addresses: @report.throttled_addresses, empty: "No address was throttled." %>
 
-      <%= render "backstage/security/banned", banned: @report.banned_addresses %>
+      <%= render "backstage/security/blocked", addresses: @report.blocked_addresses %>
 
-      <%= render "backstage/security/paths", paths: @report.blocked_paths %>
+      <%= render "backstage/security/paths", paths: @report.scanner_paths %>
 
       <%= render "backstage/security/addresses", title: "Sign-in throttles",
             description: "Addresses refused on POST #{Rack::Attack::LOGIN_PATH} — #{Rack::Attack::LOGIN_LIMIT} attempts in #{Rack::Attack::LOGIN_PERIOD.inspect}.",

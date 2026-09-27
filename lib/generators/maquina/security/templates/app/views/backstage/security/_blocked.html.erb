@@ -1,40 +1,47 @@
-<%# locals: (banned:) %>
+<%# locals: (addresses:) %>
 <%# "Banned now" is Rack::Attack's own answer at render time; the rows are the
-    refusals recorded while a ban stood, so an expired ban still shows here
-    for the week with its badge flipped. %>
+    refusals recorded by a blocklist, so an expired ban still shows here for
+    the week with its badge flipped, and an address short of a ban shows as
+    not banned. %>
 <%= render "components/card" do %>
   <%= render "components/card/header" do %>
-    <%= render "components/card/title", text: "Banned addresses" %>
+    <%= render "components/card/title", text: "Blocked addresses" %>
     <%= render "components/card/description", text: "#{Rack::Attack::SCANNER_MAXRETRY} scanner paths in #{Rack::Attack::SCANNER_FINDTIME.inspect} bans an address for #{Rack::Attack::SCANNER_BANTIME.inspect}; #{Rack::Attack::FLOOD_MAXRETRY} requests in #{Rack::Attack::GENERAL_PERIOD.inspect}, for #{Rack::Attack::FLOOD_BANTIME.inspect}." %>
   <% end %>
   <%= render "components/card/content", spacing: :full do %>
-    <% if banned.empty? %>
-      <%= empty_state(title: "No address has been banned.", icon: :check_circle, size: :compact) %>
+    <% if addresses.empty? %>
+      <%= empty_state(title: "No address has been blocked.", icon: :check_circle, size: :compact) %>
     <% else %>
       <div class="overflow-x-auto">
-        <%= render "components/table", container: false, "aria-label": "Banned addresses" do %>
+        <%= render "components/table", container: false, "aria-label": "Blocked addresses" do %>
           <%= render "components/table/header" do %>
             <%= render "components/table/row" do %>
               <%= render "components/table/head", text: "Address" %>
-              <%= render "components/table/head", text: "Refused since", css_classes: "text-right" %>
+              <%= render "components/table/head", text: "Refused", css_classes: "text-right" %>
               <%= render "components/table/head", text: "Banned" %>
               <%= render "components/table/head", text: "Since" %>
             <% end %>
           <% end %>
           <%= render "components/table/body" do %>
-            <% banned.each do |address| %>
+            <% addresses.each do |address| %>
               <%= render "components/table/row" do %>
                 <%= render "components/table/cell", css_classes: "font-mono", text: address.ip %>
                 <%= render "components/table/cell", css_classes: "text-right tabular-nums", text: number_with_delimiter(address.count) %>
                 <%= render "components/table/cell" do %>
                   <% if address.banned_now? %>
                     <%= render "components/badge", variant: :destructive, size: :sm do %>Banned now<% end %>
-                  <% else %>
+                  <% elsif address.banned? %>
                     <%= render "components/badge", variant: :outline, size: :sm do %>Expired<% end %>
+                  <% else %>
+                    <%= render "components/badge", variant: :secondary, size: :sm do %>Not banned<% end %>
                   <% end %>
                 <% end %>
                 <%= render "components/table/cell" do %>
-                  <%= render "backstage/security/utc_time", time: address.first_banned_at %>
+                  <% if address.banned? %>
+                    <%= render "backstage/security/utc_time", time: address.first_banned_at %>
+                  <% else %>
+                    <span class="text-muted-foreground">—</span>
+                  <% end %>
                 <% end %>
               <% end %>
             <% end %>

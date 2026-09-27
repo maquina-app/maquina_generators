@@ -24,7 +24,7 @@ A collection of Rails generators from the Maquina umbrella. Each generator produ
 Add to your Gemfile:
 
 ```ruby
-gem "maquina_generators", group: :development
+gem "maquina-generators", group: :development
 ```
 
 Run the generator:
@@ -256,7 +256,7 @@ Bans live in `Rails.cache`, so they need a shared cache store (Solid Cache) in p
 - **Models:** `Security::Record` (`connects_to` the `security` database), `Security::AbuseEvent` (30-day retention), `Security::AbuseReport` (the page's figures)
 - **Database:** `db/security_schema.rb` and a `security:` entry in every multi-database environment of `config/database.yml` (and `config/database.yml.example`)
 - **Retention:** a daily `purge_abuse_events` task in `config/recurring.yml`
-- **BackstageController**, **controller** (`Backstage::SecurityController`), **route** (`<prefix>/security`), **layout** and **views**: stats, throttled and banned addresses, blocked paths, sign-in throttles, targeted hosts, refusals by day, recent refusals (views skipped with `--no-copy-views`)
+- **BackstageController**, **controller** (`Backstage::SecurityController`), **route** (`<prefix>/security`), **layout** and **views**: stats, throttled addresses, blocked addresses (banned now, expired or not yet banned), scanner paths, sign-in throttles, targeted hosts, refusals by day, recent refusals (views skipped with `--no-copy-views`)
 - **Admin navigation:** a Security tab, added to an existing `_admin_navigation` partial too
 
 #### Usage

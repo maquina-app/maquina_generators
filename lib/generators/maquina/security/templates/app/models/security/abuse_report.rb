@@ -2,12 +2,15 @@
 # summarised to the top `limit` of each thing worth knowing. A briefing, not a
 # log viewer — no filters, no pagination; the recent list is the drill-down.
 #
-# `banned:` answers whether an address is banned right now. It defaults to
-# Rack::Attack's own cache read and is a kwarg so a test can hand in a Set.
+# `banned:` answers whether an address is banned right now, and `scanner_path:`
+# whether a path is one the scanner ban counts. Both default to Rack::Attack's
+# own answer and are kwargs so a test can hand in a Set.
 class Security::AbuseReport
   Address = Data.define(:ip, :count, :rules, :last_seen)
-  BannedAddress = Data.define(:ip, :count, :first_banned_at, :banned_now) do
+  BlockedAddress = Data.define(:ip, :count, :first_banned_at, :banned_now) do
     alias_method :banned_now?, :banned_now
+
+    def banned? = first_banned_at.present?
   end
   Path = Data.define(:path, :count, :addresses)
   Host = Data.define(:host, :count)
@@ -20,10 +23,12 @@ class Security::AbuseReport
 
   attr_reader :window, :limit
 
-  def initialize(window: 7.days, limit: 5, banned: ->(ip) { Rack::Attack.banned?(ip) })
+  def initialize(window: 7.days, limit: 5, banned: ->(ip) { Rack::Attack.banned?(ip) },
+    scanner_path: ->(path) { Rack::Attack.scanner_path?(path) })
     @window = window
     @limit = limit
     @banned = banned
+    @scanner_path = scanner_path
   end
 
   def events = Security::AbuseEvent.within(window)
@@ -45,17 +50,23 @@ class Security::AbuseReport
   # meaning, kept apart so scanner noise never buries it.
   def sign_in_throttles = addresses(events.where(rule: SIGN_IN_RULE))
 
-  # Addresses whose scanner or flood ban is written, by requests refused since.
-  def banned_addresses
-    events.banned.group(:ip).order(Arel.sql("COUNT(*) DESC, MIN(created_at) DESC")).limit(limit)
-      .pluck(:ip, Arel.sql("COUNT(*)"), Arel.sql("MIN(created_at)"))
-      .map { |ip, count, first| BannedAddress.new(ip:, count:, first_banned_at: parse_time(first), banned_now: @banned.call(ip)) }
+  # Addresses a blocklist refused, busiest first: the banned ones with when the
+  # ban was written, and those still short of a ban (a strike or two on the
+  # scanner rule) without it.
+  def blocked_addresses
+    events.blocked.group(:ip).order(Arel.sql("COUNT(*) DESC, MAX(created_at) DESC")).limit(limit)
+      .pluck(:ip, Arel.sql("COUNT(*)"), Arel.sql("MIN(CASE WHEN kind = 'banned' THEN created_at END)"))
+      .map { |ip, count, first| BlockedAddress.new(ip:, count:, first_banned_at: parse_time(first), banned_now: @banned.call(ip)) }
   end
 
-  # What the scanners were after.
-  def blocked_paths
-    events.blocked.group(:path).order(Arel.sql("COUNT(*) DESC, path ASC")).limit(limit)
+  # What the scanners were after. A banned address is refused on every path,
+  # its ordinary requests (`/`, `/up`) included, so the paths are kept to the
+  # ones the scanner rule counts. That is a Ruby test, not SQL, so every blocked
+  # path is read and the first `limit` scanner paths kept.
+  def scanner_paths
+    events.blocked.group(:path).order(Arel.sql("COUNT(*) DESC, path ASC"))
       .pluck(:path, Arel.sql("COUNT(*)"), Arel.sql("COUNT(DISTINCT ip)"))
+      .select { |path, _, _| @scanner_path.call(path) }.first(limit)
       .map { |path, count, addresses| Path.new(path:, count:, addresses:) }
   end
 

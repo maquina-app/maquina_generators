@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file.
 - `maquina:app` installs `maquina:security` (which brings the Rack::Attack rules) and its `database.yml` has a `security` database.
 - The admin navigation of `maquina:solid_errors` and `maquina:mission_control_jobs` links the Security page.
 
+### Fixed
+
+- The README's install line named the gem `maquina_generators`; the gem is `maquina-generators`.
+
 ## [0.5.0] - 2026-05-31
 
 ### Added

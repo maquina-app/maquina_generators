@@ -137,6 +137,9 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
     assert_file "app/models/security/abuse_report.rb" do |content|
       assert_match(/class Security::AbuseReport/, content)
       assert_match(/Rack::Attack\.banned\?\(ip\)/, content)
+      assert_match(/Rack::Attack\.scanner_path\?\(path\)/, content)
+      assert_match(/def blocked_addresses/, content)
+      assert_match(/def scanner_paths/, content)
       assert_no_match(/Arel.sql\("GROUP_CONCAT/, content)
     end
   end
@@ -306,7 +309,7 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
   test "copies views by default" do
     run_generator %w[--prefix /admin]
 
-    %w[show _addresses _banned _by_day _hosts _paths _recent _utc_time].each do |view|
+    %w[show _addresses _blocked _by_day _hosts _paths _recent _utc_time].each do |view|
       assert_file "app/views/backstage/security/#{view}.html.erb"
     end
     assert_file "app/views/backstage/security/show.html.erb" do |content|
