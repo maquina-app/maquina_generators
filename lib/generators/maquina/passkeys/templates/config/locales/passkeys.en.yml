@@ -1,0 +1,46 @@
+en:
+  flash:
+    passkeys:
+      created: "Passkey added. You can now sign in with it."
+      updated: "Passkey renamed."
+      destroyed: "Passkey removed."
+      failed: "We couldn't sign you in with that passkey. Try again or use your email."
+      unknown: "That passkey is no longer linked to an account. Sign in with your email instead."
+      challenge_expired: "The request expired. Please try again."
+      registration_failed: "We couldn't add that passkey. Please try again."
+      reauthenticate: "Sign in again to manage your passkeys."
+
+  sessions:
+    passkey:
+      or: "or"
+      sign_in: "Sign in with a passkey"
+      error: "Something went wrong with the passkey. Please try again."
+
+  passkeys:
+    index:
+      title: "Passkeys"
+      description: "Sign in with Face ID, a fingerprint or your device PIN instead of an email code."
+      add: "Add a passkey"
+      empty: "You don't have any passkeys yet."
+      rename: "Save"
+      remove: "Remove"
+      remove_confirm: "Remove this passkey? You won't be able to sign in with it anymore."
+      created: "Added %{date}"
+      synced: "Synced"
+      last_used: "Last used %{time} ago"
+      never_used: "Not used yet"
+      add_another: "This passkey lives on one device. Add another so you can still sign in if you lose it."
+      fallback: "You can always sign in with a code sent to your email."
+      unsupported: "This browser doesn't support passkeys."
+      error: "Something went wrong with the passkey. Please try again."
+      duplicate: "This device already has a passkey for your account."
+
+  activerecord:
+    models:
+      passkey:
+        one: "Passkey"
+        other: "Passkeys"
+    attributes:
+      passkey:
+        name: "Name"
+        last_used_at: "Last used"

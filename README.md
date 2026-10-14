@@ -62,6 +62,59 @@ All generated code lives in your app -- edit it directly:
 - **Email sender:** Edit `app/mailers/verification_mailer.rb`
 - **Translations:** Edit `config/locales/clave.*.yml`
 
+### Passkeys -- Passkey Sign-In for Clave
+
+**Passkeys** adds WebAuthn passkeys as a second way to sign in, on top of Clave. People add passkeys from a `/passkeys` page and sign in with Face ID, a fingerprint or a device PIN, either with a button or straight from the email field's autofill. The email code stays as the way in without a passkey, so removing every passkey never locks anyone out.
+
+The [`webauthn`](https://github.com/cedarcode/webauthn-ruby) gem handles only the cryptography (attestation and assertion parsing, signature, origin, challenge and user-verification checks). The flow itself, including controllers, model, views and JavaScript, is generated into your app. There is no JavaScript dependency: the Stimulus controllers use the browser's own `PublicKeyCredential.parseCreationOptionsFromJSON` / `parseRequestOptionsFromJSON` / `toJSON()`. The names (`passkeys` table, `credential_id`, `Session::PasskeysController`) follow the passkeys work proposed for Rails itself (rails/rails#57100).
+
+#### What it generates
+
+- **Gem:** `webauthn ~> 3.4`
+- **Initializer:** `config/initializers/webauthn.rb`. The relying party is `localhost` in development; production reads `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGINS` (or `webauthn:` in credentials) and refuses to boot without them, except during the asset build.
+- **Models:** `Passkey` (credential id, public key, sign count, transports, AAGUID, backup flags, last used) and `User#webauthn_id`, a random user handle created on first use
+- **Sign-in:** `Session::PasskeyChallengesController` and `Session::PasskeysController`. These need no email (discoverable credentials, empty allow-list), require user verification, use each challenge once and expire it after 5 minutes, and sign in through Clave's `start_new_session_for`. An unknown credential gets a 404 so the browser can forget it (`signalUnknownCredential`).
+- **Management:** `PasskeysController` and `PasskeyChallengesController` to add, rename and remove passkeys. Adding or removing a passkey needs a sign-in from the last 30 minutes (`PasskeyReauthentication::REAUTHENTICATE_AFTER`).
+- **Views and JavaScript:** `passkeys/index`, a `sessions/_passkey` partial rendered on the sign-in page (and `autocomplete="username webauthn"` on its email field), plus `passkey_sign_in_controller.js` and `passkey_registration_controller.js`
+- **Migrations:** `add_webauthn_id_to_users`, `create_passkeys`
+- **Locale files:** English and Spanish
+- **Rack::Attack:** a `passkey/ip` throttle when `config/initializers/rack_attack.rb` exists
+- **Tests:** a `register_passkey` and `sign_in_with_passkey(user)` helper on top of `WebAuthn::FakeClient`, loaded from `test/test_helper.rb`, and `test/integration/passkeys_test.rb` covering the flow. The test creates users the way Clave's `User` does, so adjust its `setup` if your model differs.
+
+#### Usage
+
+```bash
+rails g maquina:clave      # first
+rails g maquina:passkeys
+rails db:migrate
+```
+
+Then link to `passkeys_path` from your account or settings page. Anything the generator cannot place safely (a `User` model or sign-in page that no longer has Clave's shape) is listed after the install instead of being forced.
+
+#### Options
+
+```bash
+rails g maquina:passkeys               # Full install
+rails g maquina:passkeys --skip-views  # Endpoints only; bring your own UI
+```
+
+#### Production
+
+Passkeys are bound to a domain, and changing `rp_id` later orphans every saved passkey. Set it before the first user adds one:
+
+```bash
+WEBAUTHN_RP_ID=example.com
+WEBAUTHN_ORIGINS=https://example.com,https://app.example.com
+```
+
+`rp_id` can be a parent of the origins' host. To serve passkeys across different domains, publish `/.well-known/webauthn` (Related Origin Requests).
+
+#### Testing
+
+- **Integration tests:** `register_passkey` and `sign_in_with_passkey(user)` go through the real endpoints with `WebAuthn::FakeClient`.
+- **In a browser:** Chrome's virtual authenticator works in DevTools (More tools > WebAuthn) or over CDP (`WebAuthn.addVirtualAuthenticator` with `ctap2`, `internal`, a resident key and user verification). It answers the sign-in page's autofill request on its own, so loading `/session/new` signs you in without a click. To test the button, make `PublicKeyCredential.isConditionalMediationAvailable` return `false`.
+- **Dev server on another port:** set `WEBAUTHN_ORIGINS=http://localhost:<port>`.
+
 ### Registration -- Password-Based Authentication with Accounts
 
 **Registration** generates a password-based authentication system with multi-tenant account support. It builds on top of the Rails 8 authentication generator, adding an Account model (tenant), user roles, and a registration flow.

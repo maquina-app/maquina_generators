@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `maquina:passkeys` generator: passkey (WebAuthn) sign-in on top of `maquina:clave`, which it requires. The email code stays as the way in without a passkey.
+  - **What it installs:**
+    - The `webauthn` gem, used only to verify the ceremonies.
+    - `config/initializers/webauthn.rb`.
+    - The `Passkey` model and `User#webauthn_id`.
+    - Sign-in endpoints (`POST /session/passkey_challenge`, `POST /session/passkey`) that ask for no email.
+    - A `/passkeys` page to add, rename and remove passkeys.
+    - Two Stimulus controllers built on the browser's own WebAuthn JSON helpers (`parse*OptionsFromJSON`, `toJSON()`); `@github/webauthn-json` is archived, so there is no JavaScript dependency.
+    - A passkey button and autofill (conditional mediation) on the sign-in page.
+    - EN/ES locales and a `passkey/ip` Rack::Attack throttle.
+    - A `WebAuthn::FakeClient` test helper and an integration test covering the flow.
+    - The passkey UI is rendered visible and refreshed on `turbo:morph`, so a morph refresh can't leave it hidden.
+    - Sign-in and sign-in-again redirects are full page loads, so the flash survives and the new session gets a fresh CSRF token.
+  - **Security choices:**
+    - Every ceremony requires user verification, both in the options and in `verify`.
+    - Challenges live in the session, are removed before verification, and expire after 5 minutes.
+    - The returned user handle must match the passkey's owner, and blocked users are refused.
+    - A signature counter that goes backwards is refused.
+    - Adding or removing a passkey needs a sign-in from the last 30 minutes, so a stolen session cookie cannot plant a passkey that outlives it.
+    - Production refuses to boot while the relying party is still `localhost`.
+  - Every step is idempotent, and anything the generator cannot place safely is listed after the install.
+
+### Fixed
+
+- `maquina:clave --skip-registration` no longer links the sign-in page to `new_registration_path`. That route doesn't exist without sign-up, so the page raised. The link is now generated only along with the sign-up flow.
+
 ## [0.7.0] - 2026-10-14
 
 ### Added

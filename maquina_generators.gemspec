@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.email = ["mario.chavez@gmail.com"]
 
   spec.summary = "Rails generators from the Maquina umbrella"
-  spec.description = "Rails generators that write standalone code into your app: passwordless (clave) and password (registration) authentication, Rack::Attack rules with a Security dashboard, Content Security Policy reports, Solid Errors, Mission Control Jobs, Solid Queue, and a full app setup."
+  spec.description = "Rails generators that write standalone code into your app: passwordless (clave) and password (registration) authentication, passkeys, Rack::Attack rules with a Security dashboard, Content Security Policy reports, Solid Errors, Mission Control Jobs, Solid Queue, and a full app setup."
   spec.homepage = "https://maquina.app"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"

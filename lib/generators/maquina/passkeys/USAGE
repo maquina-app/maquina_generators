@@ -1,0 +1,18 @@
+Description:
+  Adds passkey (WebAuthn) sign-in on top of Clave's email-code login. Needs
+  maquina:clave; the email code stays as the way in without a passkey.
+
+  Adds the webauthn gem, which only verifies the ceremonies; the flow is
+  generated into the app. Installs the Passkey model and a webauthn_id on
+  users, sign-in endpoints (POST /session/passkey_challenge and
+  /session/passkey) that ask for no email, a /passkeys page to add, rename
+  and remove passkeys (adding or removing needs a sign-in from the last 30
+  minutes), two Stimulus controllers that use the browser's own WebAuthn JSON
+  helpers (no JavaScript library), a passkey button and autofill on the
+  sign-in page, config/initializers/webauthn.rb, EN/ES locales, a
+  Rack::Attack throttle and a FakeClient test helper. Anything it cannot
+  place safely is listed after the install instead of being forced.
+
+Examples:
+  rails g maquina:passkeys
+  rails g maquina:passkeys --skip-views    # Endpoints only; bring your own UI
