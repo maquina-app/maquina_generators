@@ -10,6 +10,10 @@ class EmailVerification < ApplicationRecord
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :code, with: ->(code) { code.strip.upcase }
 
+  # Encrypted at rest, not digested: the mail goes out through deliver_later,
+  # whose job reloads this row by GlobalID and must read the code back.
+  encrypts :code
+
   scope :pending, -> { where(verified_at: nil) }
   scope :expired, -> { where("expires_at < ?", Time.current) }
   scope :active, -> { pending.where("expires_at >= ?", Time.current) }
@@ -18,6 +22,12 @@ class EmailVerification < ApplicationRecord
 
   def expired?
     expires_at < Time.current
+  end
+
+  # Constant-time, so response timing reveals nothing about how close a guess
+  # came. Normalized the same way the stored code is.
+  def code_matches?(candidate)
+    ActiveSupport::SecurityUtils.secure_compare(code, candidate.to_s.strip.upcase)
   end
 
   def verified?
