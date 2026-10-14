@@ -26,6 +26,15 @@ class Registration::VerificationsController < ApplicationController
       return
     end
 
+    # Too many wrong guesses: kill the code so a fresh one is required.
+    if @verification.locked?
+      @verification.update!(expires_at: Time.current)
+      Rails.logger.warn "[AUTH] Verification locked after #{@verification.attempts} attempts for #{@email} from #{request.remote_ip}"
+      flash.now[:alert] = t("flash.registrations.code_locked")
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     unless @verification.code_matches?(params[:code])
       @verification.increment!(:attempts)
       Rails.logger.warn "[AUTH] Invalid verification code attempt for #{@email} from #{request.remote_ip} (attempt #{@verification.attempts})"
