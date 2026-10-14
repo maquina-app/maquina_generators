@@ -130,6 +130,13 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     assert_file "app/models/user.rb"
   end
 
+  test "sign-in page links to sign-up" do
+    run_generator
+
+    assert_file "app/views/sessions/new.html.erb",
+      /<% end %>\n\n      <p class="mt-6 text-center text-sm text-muted-foreground">\n        <%= t\("\.no_account"\) %>\n        <%= link_to t\("\.sign_up"\), new_registration_path/
+  end
+
   test "skips registration with --skip-registration" do
     run_generator %w[--skip-registration]
 
@@ -139,9 +146,13 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     assert_no_file "app/views/registrations/new.html.erb"
     assert_no_file "app/views/registration/verifications/new.html.erb"
 
-    # Session should still be generated
+    # Session should still be generated, without a link to the missing sign-up
     assert_file "app/controllers/sessions_controller.rb"
-    assert_file "app/views/sessions/new.html.erb"
+    assert_file "app/views/sessions/new.html.erb" do |content|
+      assert_no_match(/registration_path/, content)
+      assert_no_match(/t\("\.sign_up"\)/, content)
+      assert_match(/<% end %>\n    <\/div>\n  <\/div>\n<\/div>\n\z/, content)
+    end
 
     # Routes should not include registration
     assert_file "config/routes.rb" do |routes|
