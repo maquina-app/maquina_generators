@@ -1,0 +1,46 @@
+es:
+  flash:
+    passkeys:
+      created: "Llave de acceso agregada. Ya puedes iniciar sesión con ella."
+      updated: "Llave de acceso renombrada."
+      destroyed: "Llave de acceso eliminada."
+      failed: "No pudimos iniciar tu sesión con esa llave de acceso. Inténtalo de nuevo o usa tu correo."
+      unknown: "Esa llave de acceso ya no está vinculada a una cuenta. Inicia sesión con tu correo."
+      challenge_expired: "La solicitud expiró. Inténtalo de nuevo."
+      registration_failed: "No pudimos agregar esa llave de acceso. Inténtalo de nuevo."
+      reauthenticate: "Inicia sesión de nuevo para administrar tus llaves de acceso."
+
+  sessions:
+    passkey:
+      or: "o"
+      sign_in: "Iniciar sesión con llave de acceso"
+      error: "Algo salió mal con la llave de acceso. Inténtalo de nuevo."
+
+  passkeys:
+    index:
+      title: "Llaves de acceso"
+      description: "Inicia sesión con Face ID, tu huella o el PIN de tu dispositivo en lugar de un código por correo."
+      add: "Agregar llave de acceso"
+      empty: "Todavía no tienes llaves de acceso."
+      rename: "Guardar"
+      remove: "Eliminar"
+      remove_confirm: "¿Eliminar esta llave de acceso? Ya no podrás iniciar sesión con ella."
+      created: "Agregada el %{date}"
+      synced: "Sincronizada"
+      last_used: "Usada hace %{time}"
+      never_used: "Sin usar"
+      add_another: "Esta llave de acceso vive en un solo dispositivo. Agrega otra para no perder el acceso si lo pierdes."
+      fallback: "Siempre puedes iniciar sesión con un código enviado a tu correo."
+      unsupported: "Este navegador no es compatible con llaves de acceso."
+      error: "Algo salió mal con la llave de acceso. Inténtalo de nuevo."
+      duplicate: "Este dispositivo ya tiene una llave de acceso para tu cuenta."
+
+  activerecord:
+    models:
+      passkey:
+        one: "Llave de acceso"
+        other: "Llaves de acceso"
+    attributes:
+      passkey:
+        name: "Nombre"
+        last_used_at: "Último uso"

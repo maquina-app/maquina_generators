@@ -1,0 +1,77 @@
+<div class="flex flex-1 justify-center px-4 py-8">
+  <div class="w-full max-w-2xl space-y-6"
+       data-controller="passkey-registration"
+       data-action="turbo:morph@document->passkey-registration#refresh"
+       data-passkey-registration-challenge-url-value="<%= passkey_challenge_path %>"
+       data-passkey-registration-url-value="<%= passkeys_path %>"
+       data-passkey-registration-error-message-value="<%= t(".error") %>"
+       data-passkey-registration-duplicate-message-value="<%= t(".duplicate") %>"
+       data-passkey-registration-rp-id-value="<%= WebAuthn.configuration.rp_id %>"
+       data-passkey-registration-user-id-value="<%= Current.user.webauthn_id %>"
+       data-passkey-registration-user-name-value="<%= Current.user.email_address %>"
+       data-passkey-registration-display-name-value="<%= Current.user.name.presence || Current.user.email_address %>"
+       data-passkey-registration-credential-ids-value="<%= @passkeys.map(&:credential_id).to_json %>">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-foreground"><%= t(".title") %></h1>
+        <p class="mt-1 text-sm text-muted-foreground"><%= t(".description") %></p>
+      </div>
+
+      <button type="button"
+              data-action="passkey-registration#register"
+              data-passkey-registration-target="button"
+              data-component="button"
+              data-variant="primary"
+              class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors cursor-pointer disabled:opacity-50">
+        <%= t(".add") %>
+      </button>
+    </div>
+
+    <p data-passkey-registration-target="error" class="text-sm text-destructive" role="alert" hidden></p>
+    <p data-passkey-registration-target="unsupported" class="text-sm text-muted-foreground" hidden><%= t(".unsupported") %></p>
+
+    <% if @passkeys.empty? %>
+      <div class="bg-card rounded-xl border border-border p-8 text-center">
+        <p class="text-sm text-muted-foreground"><%= t(".empty") %></p>
+      </div>
+    <% else %>
+      <ul class="bg-card rounded-xl border border-border divide-y divide-border">
+        <% @passkeys.each do |passkey| %>
+          <li id="<%= dom_id(passkey) %>" class="flex flex-wrap items-center gap-4 p-4">
+            <%= form_with model: passkey, class: "flex flex-1 items-center gap-2 min-w-0" do |form| %>
+              <%= form.text_field :name, required: true, maxlength: 100,
+                    aria: { label: Passkey.human_attribute_name(:name) },
+                    data: { component: "input" },
+                    class: "min-w-0 flex-1 px-3 py-2 text-sm border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring" %>
+              <%= form.submit t(".rename"), data: { component: "button", variant: "ghost" },
+                    class: "px-3 py-2 text-sm font-medium text-foreground hover:bg-accent rounded-lg cursor-pointer" %>
+            <% end %>
+
+            <div class="text-xs text-muted-foreground space-y-1">
+              <p>
+                <%= t(".created", date: l(passkey.created_at.to_date, format: :long)) %>
+                <% if passkey.synced? %>
+                  · <span data-component="badge" class="font-medium"><%= t(".synced") %></span>
+                <% end %>
+              </p>
+              <p>
+                <%= passkey.last_used_at ? t(".last_used", time: time_ago_in_words(passkey.last_used_at)) : t(".never_used") %>
+              </p>
+            </div>
+
+            <%= button_to t(".remove"), passkey_path(passkey), method: :delete,
+                  form: { data: { turbo_confirm: t(".remove_confirm") } },
+                  data: { component: "button", variant: "destructive" },
+                  class: "px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer" %>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if @passkeys.one? && !@passkeys.first.synced? %>
+        <p class="text-sm text-muted-foreground"><%= t(".add_another") %></p>
+      <% end %>
+    <% end %>
+
+    <p class="text-sm text-muted-foreground"><%= t(".fallback") %></p>
+  </div>
+</div>

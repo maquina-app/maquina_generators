@@ -30,11 +30,13 @@
           <%%= form.submit t(".submit"), data: { component: "button", variant: "primary" }, class: "w-full px-4 py-3 text-base font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors cursor-pointer" %>
         </div>
       <%% end %>
+<% unless options[:skip_registration] -%>
 
       <p class="mt-6 text-center text-sm text-muted-foreground">
         <%%= t(".no_account") %>
         <%%= link_to t(".sign_up"), new_registration_path, class: "font-medium text-primary hover:text-primary/80" %>
       </p>
+<% end -%>
     </div>
   </div>
 </div>

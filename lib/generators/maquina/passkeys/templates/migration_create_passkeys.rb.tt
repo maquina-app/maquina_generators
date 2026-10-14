@@ -1,0 +1,20 @@
+class CreatePasskeys < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :passkeys do |t|
+      t.references :user, null: false, foreign_key: true
+      t.string :credential_id, null: false
+      t.text :public_key, null: false
+      t.bigint :sign_count, null: false, default: 0
+      t.string :name, null: false
+      t.json :transports
+      t.string :aaguid, limit: 36
+      t.boolean :backup_eligible, null: false, default: false
+      t.boolean :backed_up, null: false, default: false
+      t.datetime :last_used_at
+
+      t.timestamps
+    end
+
+    add_index :passkeys, :credential_id, unique: true
+  end
+end
