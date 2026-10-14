@@ -1,0 +1,23 @@
+# Content Security Policy violation reports (maquina:csp_reports). Lives in the
+# `security` database next to abuse_events; db/security_schema.rb carries the same
+# table for a fresh database, this migration adds it to an existing one.
+class CreateCspViolations < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :csp_violations do |t|
+      t.string :effective_directive, null: false
+      t.string :blocked_uri
+      t.string :document_uri
+      t.string :source_file
+      t.integer :line_number
+      t.integer :column_number
+      t.string :disposition
+      t.string :sample
+      t.string :ip
+      t.string :user_agent
+      t.datetime :created_at, null: false
+    end
+
+    add_index :csp_violations, :created_at
+    add_index :csp_violations, [:effective_directive, :created_at]
+  end
+end

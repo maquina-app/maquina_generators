@@ -1,0 +1,18 @@
+Description:
+  Adds a Content Security Policy violation report endpoint and shows the
+  reports on the backstage Security page. Needs maquina:security, whose
+  `security` database stores them.
+
+  Installs CspReportsController (POST <path>, no session or CSRF, both report
+  formats, 64 KB cap, browser-extension noise dropped), the
+  Security::CspViolation model and its migration in db/security_migrate, the
+  csp_violations table in db/security_schema.rb, a daily purge in
+  config/recurring.yml and a section on the Security page. It points the
+  policy's report-uri at the endpoint, gives anonymous requests a nonce
+  (Rails' session-id nonce is empty without a session), exempts the endpoint
+  from the general Rack::Attack throttle and caps it on its own. Anything it
+  cannot place safely is listed after the install instead of being forced.
+
+Examples:
+  rails g maquina:csp_reports
+  rails g maquina:csp_reports --path /security/csp-reports
