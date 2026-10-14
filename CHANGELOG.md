@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- `maquina:passkeys`:
+  - The Remove button on `/passkeys` was red text on a red fill. It now uses the ghost variant, so the red text sits on a transparent background.
+  - Renaming a passkey redirects with 303, the same as removing one.
+  - The `passkey/ip` Rack::Attack throttle counts the client address Rails resolves through trusted proxies (`action_dispatch.remote_ip`), not `req.ip`. Behind kamal-proxy, Thruster or Cloudflare, `req.ip` is the proxy, so every visitor shared one bucket.
+
 ## [0.8.0] - 2026-10-14
 
 ### Added
