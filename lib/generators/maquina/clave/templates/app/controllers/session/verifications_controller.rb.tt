@@ -27,7 +27,7 @@ class Session::VerificationsController < ApplicationController
       return
     end
 
-    if @verification.code != params[:code]&.upcase&.strip
+    unless @verification.code_matches?(params[:code])
       @verification.increment!(:attempts)
       Rails.logger.warn "[AUTH] Invalid verification code attempt for #{@email} from #{request.remote_ip} (attempt #{@verification.attempts})"
       flash.now[:alert] = t("flash.sessions.invalid_code")
