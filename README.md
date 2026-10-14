@@ -19,6 +19,8 @@ A collection of Rails generators from the Maquina umbrella. Each generator produ
 - **Migrations:** 4 migrations (accounts, users, sessions, email_verifications)
 - **Test helper:** `sign_in_as(user)` and `sign_out` for integration tests
 
+Sign-in codes are encrypted at rest with Active Record encryption and compared in constant time. The generator adds the encryption keys to `config/credentials.yml.enc` when they are missing; without a master key, run `bin/rails db:encryption:init`.
+
 #### Installation
 
 Add to your Gemfile:
@@ -55,6 +57,7 @@ All generated code lives in your app -- edit it directly:
 - **Session duration:** Edit `authentication.rb` (default: 30 days)
 - **Code expiration:** Edit controllers (default: 15 minutes)
 - **Cooldown between codes:** Edit `EmailVerification::COOLDOWN_MINUTES` (default: 15)
+- **Wrong guesses before a code locks:** Edit `EmailVerification::MAX_ATTEMPTS` (default: 5)
 - **Colors/styling:** Edit view templates (default: indigo)
 - **Email sender:** Edit `app/mailers/verification_mailer.rb`
 - **Translations:** Edit `config/locales/clave.*.yml`
@@ -319,6 +322,34 @@ done
 ```
 
 Development's `:memory_store` keeps bans inside the server process, so they reset on restart and a `bin/rails runner` script cannot see them. Production needs a shared store (Solid Cache).
+
+---
+
+### CSP Reports -- Content Security Policy Violation Endpoint
+
+**CSP Reports** gives the browser somewhere to send Content Security Policy violations and shows them on the Security page. It needs `maquina:security`, whose `security` database stores them.
+
+#### What it generates
+
+- **Controller:** `CspReportsController` at `POST /csp-reports` -- an API controller with no session or CSRF that accepts both the legacy `report-uri` body and the Reporting API body, capped at 64 KB. Reported URLs lose their query and fragment, and browser-extension violations are dropped
+- **Models:** `Security::CspViolation` (30-day retention) and `Security::CspViolationReport` (the page's figures)
+- **Database:** a migration in `db/security_migrate` and the `csp_violations` table in `db/security_schema.rb`
+- **Retention:** a daily `purge_csp_violations` task in `config/recurring.yml`
+- **Security page:** a section listing the last 7 days of violations, most frequent first
+- **Policy:** points `report_uri` at the endpoint in `config/initializers/content_security_policy.rb` (no `report-to`, which switches Chrome to the batched Reporting API) and gives anonymous requests a nonce -- Rails' session-id nonce is empty without a session
+- **Rack::Attack:** takes the endpoint out of the general throttle and caps it at 100 reports per 5 minutes per IP
+
+Every step is idempotent. Anything it cannot place safely is listed after the install instead of being forced.
+
+#### Usage
+
+```bash
+rails g maquina:csp_reports
+rails g maquina:csp_reports --path /security/csp-reports   # Different endpoint path
+bin/rails db:migrate
+```
+
+Watch the Security page while the policy is report-only, then set `content_security_policy_report_only = false` to enforce it.
 
 ---
 

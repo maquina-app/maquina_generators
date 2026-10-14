@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
 ### Added
 
 - `maquina:csp_reports` generator -- a Content Security Policy violation report endpoint on top of `maquina:security`, in one command. Adds `CspReportsController` (`POST /csp-reports` by default, `--path` to change it; an API controller with no session or CSRF; both the legacy `report-uri` and the Reporting API body shapes; 64 KB cap), `Security::CspViolation` and `Security::CspViolationReport`, a `db/security_migrate` migration plus the table in `db/security_schema.rb`, a daily purge in `config/recurring.yml`, and a section on the backstage Security page. Reported URLs lose their query and fragment, and browser-extension violations are dropped. It points the policy's `report_uri` at the endpoint (no `report-to`, which switches Chrome to the batched Reporting API), gives anonymous requests a nonce (Rails' session-id nonce is empty without a session), takes the endpoint out of the general Rack::Attack throttle and caps it at 100 per 5 minutes per IP. Every step is idempotent, and anything it cannot place safely is listed after the install instead of being forced.
