@@ -1,5 +1,6 @@
 require "rails/generators"
 require "rails/generators/migration"
+require "active_support/encrypted_configuration"
 
 module Maquina
   module Generators
@@ -42,6 +43,23 @@ module Maquina
       end
 
       # 2. Controllers
+      # EmailVerification encrypts its code, which needs Active Record
+      # encryption keys. They go into the app's credentials when missing; with
+      # no master key to write them, the post-install message says what to run.
+      def configure_encryption_keys
+        credentials = app_credentials
+        if credentials.nil?
+          @encryption_pending = true
+          return
+        end
+
+        content = credentials.read
+        return if content.match?(/^active_record_encryption:/)
+
+        credentials.write(content.rstrip + (content.strip.empty? ? "" : "\n\n") + encryption_keys_yaml)
+        @encryption_written = true
+      end
+
       def create_controllers
         template "app/controllers/concerns/authentication.rb.tt",
           "app/controllers/concerns/authentication.rb"
@@ -172,6 +190,15 @@ module Maquina
           say "  4. Visit /registration/new           # Sign-up page"
         end
         say ""
+        if @encryption_written
+          say "Added Active Record encryption keys to config/credentials.yml.enc (EmailVerification encrypts its code).", :yellow
+          say ""
+        elsif @encryption_pending
+          say "EmailVerification encrypts its code. Generate keys and add them to your credentials:", :yellow
+          say "  bin/rails db:encryption:init"
+          say "  bin/rails credentials:edit"
+          say ""
+        end
         say "Optional:", :yellow
         say "  - Edit app/controllers/concerns/authentication.rb to customize redirect URLs"
         say "  - Edit config/locales/clave.*.yml to customize messages"
@@ -180,6 +207,27 @@ module Maquina
       end
 
       private
+
+      # The app's credentials, or nil when there is no key to decrypt them with.
+      def app_credentials
+        key_path = File.join(destination_root, "config/master.key")
+        return unless File.exist?(key_path) || ENV["RAILS_MASTER_KEY"].present?
+
+        ActiveSupport::EncryptedConfiguration.new(
+          config_path: File.join(destination_root, "config/credentials.yml.enc"),
+          key_path: key_path, env_key: "RAILS_MASTER_KEY", raise_if_missing_key: false
+        )
+      end
+
+      # The same shape `bin/rails db:encryption:init` prints.
+      def encryption_keys_yaml
+        <<~YAML
+          active_record_encryption:
+            primary_key: #{SecureRandom.alphanumeric(32)}
+            deterministic_key: #{SecureRandom.alphanumeric(32)}
+            key_derivation_salt: #{SecureRandom.alphanumeric(32)}
+        YAML
+      end
 
       def migration_version
         "[#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}]"

@@ -1,6 +1,7 @@
 class EmailVerification < ApplicationRecord
   VERIFICATION_TYPES = %w[signup login].freeze
   COOLDOWN_MINUTES = 15
+  MAX_ATTEMPTS = 5
 
   validates :email, presence: true, format: {with: URI::MailTo::EMAIL_REGEXP}
   validates :code, presence: true
@@ -10,6 +11,10 @@ class EmailVerification < ApplicationRecord
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :code, with: ->(code) { code.strip.upcase }
 
+  # Encrypted at rest, not digested: the mail goes out through deliver_later,
+  # whose job reloads this row by GlobalID and must read the code back.
+  encrypts :code
+
   scope :pending, -> { where(verified_at: nil) }
   scope :expired, -> { where("expires_at < ?", Time.current) }
   scope :active, -> { pending.where("expires_at >= ?", Time.current) }
@@ -18,6 +23,19 @@ class EmailVerification < ApplicationRecord
 
   def expired?
     expires_at < Time.current
+  end
+
+  # A code is single-use against a bounded number of guesses: once the wrong-code
+  # count hits the ceiling the record is dead regardless of how many IPs an
+  # attacker rotates through, since each code only ever maps to one row.
+  def locked?
+    attempts >= MAX_ATTEMPTS
+  end
+
+  # Constant-time, so response timing reveals nothing about how close a guess
+  # came. Normalized the same way the stored code is.
+  def code_matches?(candidate)
+    ActiveSupport::SecurityUtils.secure_compare(code, candidate.to_s.strip.upcase)
   end
 
   def verified?

@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file.
 
 - `maquina:csp_reports` generator -- a Content Security Policy violation report endpoint on top of `maquina:security`, in one command. Adds `CspReportsController` (`POST /csp-reports` by default, `--path` to change it; an API controller with no session or CSRF; both the legacy `report-uri` and the Reporting API body shapes; 64 KB cap), `Security::CspViolation` and `Security::CspViolationReport`, a `db/security_migrate` migration plus the table in `db/security_schema.rb`, a daily purge in `config/recurring.yml`, and a section on the backstage Security page. Reported URLs lose their query and fragment, and browser-extension violations are dropped. It points the policy's `report_uri` at the endpoint (no `report-to`, which switches Chrome to the batched Reporting API), gives anonymous requests a nonce (Rails' session-id nonce is empty without a session), takes the endpoint out of the general Rack::Attack throttle and caps it at 100 per 5 minutes per IP. Every step is idempotent, and anything it cannot place safely is listed after the install instead of being forced.
 
+### Security
+
+- `maquina:clave` encrypts the sign-in code at rest (`encrypts :code` on `EmailVerification`) and checks it in constant time through `EmailVerification#code_matches?` (`secure_compare`) in both the session and registration verification controllers, instead of comparing with `!=`. The generator writes Active Record encryption keys into `config/credentials.yml.enc` when they are missing; without a master key it tells you to run `bin/rails db:encryption:init`. Encrypted rather than digested because the mail goes out through `deliver_later`, whose job reloads the record and must read the code back.
+
+- `maquina:clave` locks a sign-in or sign-up code after 5 wrong guesses (`EmailVerification::MAX_ATTEMPTS`, `#locked?`). Both verification controllers check the lock before the guess, expire the code on the spot and answer `code_locked` (new EN/ES copy), so a code absorbs a bounded number of guesses however many IPs an attacker rotates through.
+
 ## [0.6.0] - 2026-09-26
 
 ### Added

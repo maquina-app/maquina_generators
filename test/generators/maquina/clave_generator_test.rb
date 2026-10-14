@@ -181,9 +181,83 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "the sign-in code is encrypted at rest and compared in constant time" do
+    run_generator
+
+    assert_file "app/models/email_verification.rb" do |content|
+      assert_match(/encrypts :code/, content)
+      assert_match(/def code_matches\?\(candidate\)/, content)
+      assert_match(/ActiveSupport::SecurityUtils\.secure_compare/, content)
+    end
+    %w[session registration].each do |flow|
+      assert_file "app/controllers/#{flow}/verifications_controller.rb" do |content|
+        assert_match(/unless @verification\.code_matches\?\(params\[:code\]\)/, content)
+        assert_no_match(/@verification\.code !=/, content)
+      end
+    end
+  end
+
+  test "a code dies after five wrong guesses in both verification flows" do
+    run_generator
+
+    assert_file "app/models/email_verification.rb" do |content|
+      assert_match(/MAX_ATTEMPTS = 5/, content)
+      assert_match(/def locked\?\n    attempts >= MAX_ATTEMPTS/, content)
+    end
+    {"session" => "sessions", "registration" => "registrations"}.each do |flow, scope|
+      assert_file "app/controllers/#{flow}/verifications_controller.rb" do |content|
+        assert_match(/if @verification\.locked\?\n      @verification\.update!\(expires_at: Time\.current\)/, content)
+        assert_match(/t\("flash\.#{scope}\.code_locked"\)/, content)
+        assert content.index("@verification.locked?") < content.index("code_matches?"),
+          "the lock is checked before the guess, so a correct sixth guess is refused too"
+      end
+    end
+    %w[en es].each do |locale|
+      assert_file "config/locales/clave.#{locale}.yml" do |content|
+        assert_equal 2, content.scan(/^      code_locked: /).size
+      end
+    end
+  end
+
+  test "writes Active Record encryption keys into the credentials when they are missing" do
+    credentials = create_credentials("secret_key_base: abc\n")
+
+    output = run_generator
+
+    content = credentials.read
+    assert_match(/\Asecret_key_base: abc\n\nactive_record_encryption:\n  primary_key: \w{32}\n  deterministic_key: \w{32}\n  key_derivation_salt: \w{32}\n\z/, content)
+    assert_match(/Added Active Record encryption keys/, output)
+  end
+
+  test "leaves existing encryption keys alone" do
+    existing = "active_record_encryption:\n  primary_key: keep\n"
+    credentials = create_credentials(existing)
+
+    run_generator
+
+    assert_equal existing, credentials.read
+  end
+
+  test "without a master key it explains how to add the encryption keys" do
+    output = run_generator
+
+    assert_no_file "config/credentials.yml.enc"
+    assert_match(/bin\/rails db:encryption:init/, output)
+  end
+
   private
 
   def mkdir_p(path)
     FileUtils.mkdir_p(File.join(destination_root, path))
+  end
+
+  def create_credentials(content)
+    key = ActiveSupport::EncryptedConfiguration.generate_key
+    File.write(File.join(destination_root, "config/master.key"), key)
+    ActiveSupport::EncryptedConfiguration.new(
+      config_path: File.join(destination_root, "config/credentials.yml.enc"),
+      key_path: File.join(destination_root, "config/master.key"),
+      env_key: "RAILS_MASTER_KEY_UNUSED", raise_if_missing_key: true
+    ).tap { |credentials| credentials.write(content) }
   end
 end
