@@ -43,9 +43,9 @@ class PasskeysController < ApplicationController
   # PATCH /passkeys/:id
   def update
     if @passkey.update(params.expect(passkey: [:name]))
-      redirect_to passkeys_path, notice: t("flash.passkeys.updated")
+      redirect_to passkeys_path, notice: t("flash.passkeys.updated"), status: :see_other
     else
-      redirect_to passkeys_path, alert: @passkey.errors.full_messages.to_sentence
+      redirect_to passkeys_path, alert: @passkey.errors.full_messages.to_sentence, status: :see_other
     end
   end
 

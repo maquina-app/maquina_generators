@@ -248,9 +248,10 @@ module Maquina
         <<~RUBY
 
           # Passkey sign-in (maquina:passkeys): the challenge and the assertion,
-          # counted like the email-code login above.
+          # counted like the email-code login above. Keyed on the address Rails
+          # resolves through trusted proxies, not the proxy hop in req.ip.
           Rack::Attack.throttle("passkey/ip", limit: #{THROTTLE_LIMIT}, period: #{THROTTLE_PERIOD}) do |req|
-            req.ip if req.path.start_with?("/session/passkey") && req.post?
+            (req.env["action_dispatch.remote_ip"]&.to_s || req.ip) if req.path.start_with?("/session/passkey") && req.post?
           end
         RUBY
       end

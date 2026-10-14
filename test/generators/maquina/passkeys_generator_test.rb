@@ -124,6 +124,19 @@ class Maquina::Generators::PasskeysGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "renaming and removing redirect with 303 and the remove button stays readable" do
+    run_generator
+
+    assert_file "app/controllers/passkeys_controller.rb" do |content|
+      assert_equal 3, content.scan(/redirect_to passkeys_path, .*status: :see_other$/).size
+      assert_no_match(/redirect_to(?!.*see_other)/, content)
+    end
+    assert_file "app/views/passkeys/index.html.erb" do |content|
+      assert_no_match(/variant: "destructive"/, content)
+      assert_match(/variant: "ghost" },\n\s+class: "[^"]*text-destructive hover:bg-destructive\/10/, content)
+    end
+  end
+
   test "adds the passkey button and autofill to the sign-in page" do
     run_generator
 
@@ -197,6 +210,7 @@ class Maquina::Generators::PasskeysGeneratorTest < Rails::Generators::TestCase
     run_generator
 
     assert_file "config/initializers/rack_attack.rb", /Rack::Attack\.throttle\("passkey\/ip", limit: 20, period: 1\.minute\)/
+    assert_file "config/initializers/rack_attack.rb", /\(req\.env\["action_dispatch\.remote_ip"\]&\.to_s \|\| req\.ip\) if req\.path\.start_with\?\("\/session\/passkey"\)/
   end
 
   test "running twice changes nothing" do

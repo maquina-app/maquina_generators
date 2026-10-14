@@ -61,7 +61,7 @@
 
             <%= button_to t(".remove"), passkey_path(passkey), method: :delete,
                   form: { data: { turbo_confirm: t(".remove_confirm") } },
-                  data: { component: "button", variant: "destructive" },
+                  data: { component: "button", variant: "ghost" },
                   class: "px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer" %>
           </li>
         <% end %>
