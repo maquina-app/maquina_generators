@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 - `maquina:clave` encrypts the sign-in code at rest (`encrypts :code` on `EmailVerification`) and checks it in constant time through `EmailVerification#code_matches?` (`secure_compare`) in both the session and registration verification controllers, instead of comparing with `!=`. The generator writes Active Record encryption keys into `config/credentials.yml.enc` when they are missing; without a master key it tells you to run `bin/rails db:encryption:init`. Encrypted rather than digested because the mail goes out through `deliver_later`, whose job reloads the record and must read the code back.
 
+- `maquina:clave` locks a sign-in or sign-up code after 5 wrong guesses (`EmailVerification::MAX_ATTEMPTS`, `#locked?`). Both verification controllers check the lock before the guess, expire the code on the spot and answer `code_locked` (new EN/ES copy), so a code absorbs a bounded number of guesses however many IPs an attacker rotates through.
+
 ## [0.6.0] - 2026-09-26
 
 ### Added

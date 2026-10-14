@@ -1,6 +1,7 @@
 class EmailVerification < ApplicationRecord
   VERIFICATION_TYPES = %w[signup login].freeze
   COOLDOWN_MINUTES = 15
+  MAX_ATTEMPTS = 5
 
   validates :email, presence: true, format: {with: URI::MailTo::EMAIL_REGEXP}
   validates :code, presence: true
@@ -22,6 +23,13 @@ class EmailVerification < ApplicationRecord
 
   def expired?
     expires_at < Time.current
+  end
+
+  # A code is single-use against a bounded number of guesses: once the wrong-code
+  # count hits the ceiling the record is dead regardless of how many IPs an
+  # attacker rotates through, since each code only ever maps to one row.
+  def locked?
+    attempts >= MAX_ATTEMPTS
   end
 
   # Constant-time, so response timing reveals nothing about how close a guess

@@ -197,6 +197,28 @@ class Maquina::Generators::ClaveGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "a code dies after five wrong guesses in both verification flows" do
+    run_generator
+
+    assert_file "app/models/email_verification.rb" do |content|
+      assert_match(/MAX_ATTEMPTS = 5/, content)
+      assert_match(/def locked\?\n    attempts >= MAX_ATTEMPTS/, content)
+    end
+    {"session" => "sessions", "registration" => "registrations"}.each do |flow, scope|
+      assert_file "app/controllers/#{flow}/verifications_controller.rb" do |content|
+        assert_match(/if @verification\.locked\?\n      @verification\.update!\(expires_at: Time\.current\)/, content)
+        assert_match(/t\("flash\.#{scope}\.code_locked"\)/, content)
+        assert content.index("@verification.locked?") < content.index("code_matches?"),
+          "the lock is checked before the guess, so a correct sixth guess is refused too"
+      end
+    end
+    %w[en es].each do |locale|
+      assert_file "config/locales/clave.#{locale}.yml" do |content|
+        assert_equal 2, content.scan(/^      code_locked: /).size
+      end
+    end
+  end
+
   test "writes Active Record encryption keys into the credentials when they are missing" do
     credentials = create_credentials("secret_key_base: abc\n")
 
