@@ -364,6 +364,47 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_match(/registrations\/new/, output)
   end
 
+  test "passkeys need clave" do
+    %w[none registration].each do |auth|
+      error = assert_raises(Thor::Error) { run_generator ["--auth", auth, "--passkeys"], debug: true }
+      assert_match(/--auth clave --passkeys/, error.message)
+    end
+    assert_no_file "Procfile.dev"
+  end
+
+  test "passkeys show up in the home page, README and post-install" do
+    output = run_generator %w[--auth clave --passkeys]
+
+    assert_file "app/views/home/index.html.erb", /link_to "Passkeys", passkeys_path/
+    assert_file "README.md" do |content|
+      assert_match(/\*\*Passkeys\*\*/, content)
+      assert_match(%r{localhost:3000/passkeys \| Passkeys}, content)
+    end
+    assert_match(%r{Visit /passkeys to add a passkey}, output)
+    assert_match(/WEBAUTHN_RP_ID and WEBAUTHN_ORIGINS/, output)
+  end
+
+  test "without passkeys nothing mentions them" do
+    output = run_generator %w[--auth clave]
+
+    assert_file "app/views/home/index.html.erb" do |content|
+      assert_no_match(/passkeys_path/, content)
+    end
+    assert_file "README.md" do |content|
+      assert_no_match(/Passkeys/, content)
+    end
+    assert_no_match(/passkey/, output)
+  end
+
+  test "points the passkey origin at a custom development port" do
+    initializer = File.join(destination_root, "config/initializers/webauthn.rb")
+    File.write(initializer, %(config.allowed_origins = Array(ENV["WEBAUTHN_ORIGINS"]&.split(",") || "http://localhost:3000")\n))
+
+    run_generator %w[--auth clave --passkeys --port 3100]
+
+    assert_match(/"http:\/\/localhost:3100"\)\n\z/, File.read(initializer))
+  end
+
   test "injects database.yml restore into bin/setup" do
     write_bin_setup
 

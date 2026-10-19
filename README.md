@@ -423,7 +423,7 @@ Watch the Security page while the policy is report-only, then set `content_secur
 9. Adds turbo morphing, `yield :head`, and simplifies `<main>` tag in layout
 10. Optionally installs authentication (`maquina:clave` or `maquina:registration`)
 11. Invokes sub-generators: `maquina:mission_control_jobs`, `maquina:solid_errors`
-12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`, then `maquina:security` (which installs the `maquina:rack_attack` rules)
+12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`, then `maquina:security` (which installs the `maquina:rack_attack` rules), and `maquina:passkeys` with `--passkeys`
 13. Restores custom layouts overwritten by gem installers
 14. Configures multi-database `database.yml` (primary, queue, cache, cable, errors, security)
 15. Creates a HomeController with root route
@@ -436,6 +436,7 @@ Watch the Security page while the policy is report-only, then set `content_secur
 rails g maquina:app
 rails g maquina:app --prefix /backstage --port 3100
 rails g maquina:app --auth registration
+rails g maquina:app --auth clave --passkeys
 ```
 
 #### Options
@@ -443,6 +444,7 @@ rails g maquina:app --auth registration
 - `--prefix` (default: `/admin`) -- Base path prefix for backstage tools (Solid Errors, Mission Control Jobs, Security)
 - `--port` (default: `3000`) -- Default port for the development server
 - `--auth` (default: `none`) -- Authentication type: `none`, `clave`, or `registration`
+- `--passkeys` (default: `false`) -- Adds passkey sign-in with `maquina:passkeys`. It needs `--auth clave` and refuses to run without it. The passkey origin follows `--port`, and the home page links to `/passkeys`.
 
 #### After running
 

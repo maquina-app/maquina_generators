@@ -11,6 +11,15 @@ module Maquina
         desc: "Default port for development server"
       class_option :auth, type: :string, default: "none",
         desc: "Authentication type: none, clave, or registration"
+      class_option :passkeys, type: :boolean, default: false,
+        desc: "Add passkey sign-in on top of clave (requires --auth clave)"
+
+      # 0. Check options before touching anything
+      def check_options
+        return unless options[:passkeys] && options[:auth] != "clave"
+
+        raise Thor::Error, "--passkeys builds on clave. Run with `--auth clave --passkeys`."
+      end
 
       # 1. Add gems
       def add_gems
@@ -215,6 +224,24 @@ module Maquina
         generate "maquina:security", "--prefix", options[:prefix], "--quiet"
       end
 
+      # 12b. Install passkeys (after security, so its Rack::Attack throttle lands)
+      def install_passkeys
+        return unless options[:passkeys] && rails_app?
+
+        generate "maquina:passkeys", "--quiet"
+      end
+
+      # 12c. Point the passkey origin at the development port
+      def configure_passkeys_origin
+        return unless options[:passkeys] && options[:port] != "3000"
+
+        initializer = File.join(destination_root, "config/initializers/webauthn.rb")
+        return unless File.exist?(initializer)
+
+        gsub_file "config/initializers/webauthn.rb",
+          '"http://localhost:3000"', %("http://localhost:#{options[:port]}")
+      end
+
       # 13. Restore custom layouts overwritten by gem installers
       def restore_custom_layouts
         return unless rails_app?
@@ -339,6 +366,10 @@ module Maquina
           say "  - Visit /session/new to sign in"
           say "  - Visit /registrations/new to sign up" if options[:auth] == "registration"
           say "  - Visit /registration/new to sign up" if options[:auth] == "clave"
+          if options[:passkeys]
+            say "  - Visit /passkeys to add a passkey"
+            say "  - Production: set WEBAUTHN_RP_ID and WEBAUTHN_ORIGINS before the first passkey"
+          end
           say "  - Customize: app/controllers/concerns/authentication.rb"
           say "  - Locales: config/locales/"
         end

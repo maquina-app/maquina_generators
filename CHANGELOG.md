@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `--passkeys` option for `maquina:app`. It runs `maquina:passkeys` after `maquina:security`, so the `passkey/ip` throttle lands in the Rack::Attack rules.
+  - It needs `--auth clave` and stops before changing anything without it.
+  - The development passkey origin follows `--port`.
+  - The home page, README and post-install message point to `/passkeys`.
+
 ## [0.8.1] - 2026-10-14
 
 ### Fixed

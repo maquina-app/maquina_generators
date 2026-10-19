@@ -26,6 +26,9 @@ Your app will be running at **http://localhost:<%= options[:port] %>**.
 <% if options[:auth] != "none" -%>
 | **Authentication** | <%= options[:auth] == "clave" ? "Clave passwordless email-code authentication" : "Registration-based email/password authentication" %> |
 <% end -%>
+<% if options[:passkeys] -%>
+| **Passkeys** | Passkey sign-in with Face ID, a fingerprint or a device PIN; the email code stays as the way in without one |
+<% end -%>
 | **Background Jobs** | Solid Queue with Mission Control Jobs dashboard |
 | **Error Tracking** | Solid Errors with custom UI |
 | **Rate Limiting** | Rack::Attack with sensible defaults |
@@ -51,6 +54,9 @@ Your app will be running at **http://localhost:<%= options[:port] %>**.
 | http://localhost:<%= options[:port] %>/registrations/new | Sign up |
 <% elsif options[:auth] == "clave" -%>
 | http://localhost:<%= options[:port] %>/registration/new | Sign up |
+<% end -%>
+<% if options[:passkeys] -%>
+| http://localhost:<%= options[:port] %>/passkeys | Passkeys |
 <% end -%>
 <% end -%>
 

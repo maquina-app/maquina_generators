@@ -9,3 +9,5 @@ Examples:
   rails g maquina:app
 
   rails g maquina:app --prefix /backstage --port 3100
+
+  rails g maquina:app --auth clave --passkeys
