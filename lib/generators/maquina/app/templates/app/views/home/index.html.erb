@@ -15,6 +15,9 @@
         <p class="text-sm text-muted-foreground">
           Signed in as <span class="font-medium text-foreground"><%%= Current.user.email_address %></span>
         </p>
+<% if options[:passkeys] -%>
+        <%%= link_to "Passkeys", passkeys_path, data: { component: "button", variant: "outline", size: "sm" } %>
+<% end -%>
         <%%= button_to t(".sign_out", default: "Sign Out"), session_path, method: :delete, data: { component: "button", variant: "outline", size: "sm" } %>
       </div>
     <%% else %>
