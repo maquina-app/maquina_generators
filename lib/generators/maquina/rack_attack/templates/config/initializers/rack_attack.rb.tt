@@ -398,6 +398,12 @@ class Rack::Attack
 
   # Does the app itself route this path? Compares the request path against the
   # app's route patterns, treating a dynamic segment as a wildcard.
+  #
+  # A dynamic segment at the ROOT is NOT counted as "the app routes this".
+  # A route like "/:slug" matches every single-segment path, so `/.env` and
+  # `/key.pem` would look like the app's own pages and the guard would stand
+  # the rule down for exactly the paths it exists to catch. A root segment
+  # must be a LITERAL to count.
   def self.app_route?(path)
     return false unless route_guard?
 
@@ -408,6 +414,7 @@ class Rack::Attack
       next false if pattern_segments.size != segments.size
 
       pattern_segments.each_with_index.all? do |segment, index|
+        next false if index.zero? && segment.start_with?(":")
         segment.start_with?(":") || segment.include?("*") || segment == segments[index]
       end
     end

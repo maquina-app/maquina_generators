@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 
 - `maquina:rack_attack` installs a **route guard**: a scanner rule stands down when the app itself routes the path, so a broad pattern cannot break a real route. The route table is read once, on the first request, and cached.
   - The guard stands down entirely when the app has a root catch-all route (`/*path`), because then every path "matches" the app and the guard would disable itself.
+  - A dynamic segment at the root (`/:slug`) does not count as "the app routes this": it matches every single-segment path, and `/.env` would look like the app's own page.
   - The `/graphql` pattern is only refused when the app does not serve GraphQL.
 
 ## [0.9.0] - 2026-10-19

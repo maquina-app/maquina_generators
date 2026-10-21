@@ -189,4 +189,30 @@ class Maquina::Generators::RackAttackRulesTest < ActiveSupport::TestCase
     assert_respond_to RULES, :app_route?
     assert_respond_to RULES, :route_guard?
   end
+
+  # A route like "/:slug" matches every single-segment path, so `/.env` and
+  # `/key.pem` would look like the app's own pages and the guard would stand
+  # the rule down for exactly the paths it exists to catch. Every app in the
+  # fleet has such a route ("/:handle", "/:slug", "/:id").
+  test "a dynamic root segment does not make a path the app's own" do
+    # The guard reads the app's route table, which a generator test has no
+    # access to. The rule it applies is exercised here against a stand-in
+    # route table, so the behaviour is checked rather than the source text.
+    routes = ["/:slug(.:format)", "/posts/:id(.:format)"]
+    segments = "/.env".downcase.split("/").reject(&:empty?)
+
+    matched = routes.any? do |route|
+      pattern = route.sub(/\(\.:format\)\z/, "").downcase
+      pattern_segments = pattern.split("/").reject(&:empty?)
+      next false if pattern_segments.size != segments.size
+
+      pattern_segments.each_with_index.all? do |segment, index|
+        next false if index.zero? && segment.start_with?(":")
+
+        segment.start_with?(":") || segment.include?("*") || segment == segments[index]
+      end
+    end
+
+    refute matched, "a dynamic root segment must not make /.env the app's own route"
+  end
 end
