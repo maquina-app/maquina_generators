@@ -282,6 +282,7 @@ rails g maquina:solid_queue --database postgresql # PostgreSQL
 #### What it generates
 
 - **Initializer:** `config/initializers/rack_attack.rb` with the bans, throttles, safelist, 403 responder and an `[ATTACK]` log line per refusal. Its knobs are constants on `Rack::Attack` (`SCANNER_*`, `GENERAL_*`, `FLOOD_*`, `LOGIN_*`) and `Rack::Attack.banned?(ip)` answers whether an address is banned now.
+- **Route guard:** `Rack::Attack.app_route?(path)` answers whether the app itself routes a path, and `Rack::Attack.route_guard?` whether the guard is active (it stands down when the app has a root catch-all).
 
 #### Usage
 
@@ -295,6 +296,9 @@ The generator automatically runs `bundle install`.
 #### Default Protections
 
 - **Scanner ban (Fail2Ban):** three scanner paths in 10 minutes bans the IP for 7 days. Scanner paths are PHP files (`*.php`), WordPress paths (`wp-admin`, `wp-login`, etc.), sensitive files anywhere in the path (`.env`, `.git`, `/etc/passwd`, etc.), backup archives (`.zip`, `.sql`, `.tar.gz`, `.bak`, etc.) and scanner targets (`phpmyadmin`, `cgi-bin`, etc.). `/rails/active_storage` is exempt.
+  - The list also names what a modern scanner reaches for first: cloud provider credentials (`service-account.json`, `firebase-adminsdk.json`), container runtime internals (`/var/run/secrets/...`, `/proc/self/environ`), infrastructure as code (`docker-compose.yml`, `terraform.tfstate`), bare secret files (`secrets.json`, `credentials.json`), dev-server artefacts (`__vite_rsc_findSourceMapURL`, `/@fs/...`), source maps, dotfile credentials and encoded path traversal (`..%2F`).
+  - The path is unhidden before it is matched, so an encoded traversal is caught like a plain one. A public key is not a private key: `/public_key.pem` is still served.
+- **Route guard:** a scanner rule stands down when the app itself routes the path, so a broad pattern cannot break a real route. The route table is read once, on the first request, and cached. The guard stands down entirely when the app has a root catch-all route (`/*path`), because then every path would "match" the app.
 - **Flood ban (Allow2Ban):** 600 requests in 5 minutes (twice the general throttle) bans the IP for 1 day.
 - **Throttles:** 300 requests/5min per IP (general; `/assets` and `/rails/active_storage` exempt), 5 `POST /session`/20s per IP
 - **Safelists:** Localhost (`127.0.0.1`, `::1`)

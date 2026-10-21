@@ -44,7 +44,10 @@ module Maquina
         say "Rack::Attack has been installed!", :green
         say ""
         say "Default protections enabled:", :yellow
-        say "  - Scanner ban: 3 scanner paths (PHP, WordPress, dotfiles, backup archives) in 10 min bans the IP for 7 days"
+        say "  - Scanner ban: 3 scanner paths in 10 min bans the IP for 7 days"
+        say "    (PHP, WordPress, dotfiles, backup archives, cloud keys, container"
+        say "     internals, infra-as-code, dev-server artefacts, path traversal)"
+        say "  - Route guard: a scanner rule stands down on a path the app routes"
         say "  - Flood ban: 600 requests in 5 min bans the IP for 1 day"
         say "  - Throttle: 300 req/5min per IP, 5 POST #{options[:login_path]}/20s per IP"
         say "  - Safelist: localhost (127.0.0.1, ::1)"

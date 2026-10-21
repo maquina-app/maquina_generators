@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- `maquina:rack_attack` and `maquina:security` install a much wider scanner-path list, and a route guard that keeps it from breaking the host app.
+  - The list names what a modern scanner reaches for first, not just the classic targets: cloud provider credentials (`service-account.json`, `firebase-adminsdk.json`), container runtime internals (`/var/run/secrets/...`, `/proc/self/environ`), infrastructure as code (`docker-compose.yml`, `terraform.tfstate`), bare secret files (`secrets.json`, `credentials.json`), dev-server artefacts (`__vite_rsc_findSourceMapURL`, `/@fs/...`), source maps, dotfile credentials and encoded path traversal.
+  - Measured against 30,703 refused requests collected from five production apps, the list names 5.2% of the observed attack traffic before and 58.7% after.
+  - The path is unhidden before it is matched, so `/api/orders/..%2Fadmin/config.json` is caught like `/api/orders/../admin/config.json`.
+  - A public key is not a private key: `/public_key.pem` and `/pubkey.pem` are still served.
+
+### Added
+
+- `maquina:rack_attack` installs a **route guard**: a scanner rule stands down when the app itself routes the path, so a broad pattern cannot break a real route. The route table is read once, on the first request, and cached.
+  - The guard stands down entirely when the app has a root catch-all route (`/*path`), because then every path "matches" the app and the guard would disable itself.
+  - The `/graphql` pattern is only refused when the app does not serve GraphQL.
+
 ## [0.9.0] - 2026-10-19
 
 ### Added

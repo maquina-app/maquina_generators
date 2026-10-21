@@ -54,6 +54,87 @@ class Maquina::Generators::RackAttackGeneratorTest < Rails::Generators::TestCase
     end
   end
 
+  test "treats cloud keys, container runtime, dev-server and infra files as scanner paths" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/CLOUD_KEY_PATHS/, content)
+      assert_match(/CONTAINER_PATHS/, content)
+      assert_match(/IAC_PATHS/, content)
+      assert_match(/SECRET_FILE_PATHS/, content)
+      assert_match(/CONFIG_DUMP_PATHS/, content)
+      assert_match(/DOTFILE_CRED_PATHS/, content)
+      assert_match(/DEV_SERVER_PATHS/, content)
+      assert_match(/SOURCE_MAP_PATHS/, content)
+      assert_match(/TRAVERSAL_PATHS/, content)
+      assert_match(/PRIVATE_KEY_PATHS/, content)
+      # The containers the rules name.
+      assert_match(%r{/var/run/secrets}, content)
+      assert_match(%r{service[_-]?account}, content)
+      assert_match(%r{docker-compose}, content)
+      assert_match(%r{terraform\.tfstate}, content)
+      assert_match(%r{__vite_rsc_}, content)
+    end
+  end
+
+  test "unhides an encoded path before matching it" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/ENCODED_DOTS/, content)
+      assert_match(/ENCODED_SLASHES/, content)
+      assert_match(/gsub\(ENCODED_DOTS/, content)
+    end
+  end
+
+  test "exempts a public key from the private-key rule" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/PUBLIC_KEY_EXCEPTIONS/, content)
+      assert_match(/!path\.match\?\(PUBLIC_KEY_EXCEPTIONS\)/, content)
+    end
+  end
+
+  test "stands a rule down when the app routes the path" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/def self\.app_route\?/, content)
+      assert_match(/def self\.route_guard\?/, content)
+      # The blocklist asks the guard before refusing.
+      assert_match(/Rack::Attack\.scanner_path\?\(req\.path\) && !Rack::Attack\.app_route\?\(req\.path\)/, content)
+    end
+  end
+
+  test "the route guard stands down when the app has a root catch-all" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/root_catchall/, content)
+      assert_match(/first\.include\?\("\*"\)/, content)
+    end
+  end
+
+  test "keeps GraphQL opt-in" do
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/GRAPHQL_IS_ROUTE = false/, content)
+      assert_match(/GRAPHQL_PATHS/, content)
+    end
+  end
+
+  test "does not name a real sign-in route as a scanner path" do
+    # "/login" is an ordinary route name. The Jenkins signature used to include
+    # it, which would have blocked a real sign-in page.
+    run_generator
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_no_match(%r{^\s*\|\s*\^/\(script\|view\|job\|build}, content)
+    end
+  end
+
   test "exempts Active Storage from scanner paths and the general throttle" do
     run_generator
 
