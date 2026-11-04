@@ -1,9 +1,12 @@
 require "rails/generators"
 require "generators/maquina/rack_attack/rack_attack_generator"
+require_relative "../mcp/mcp_sibling_tools"
 
 module Maquina
   module Generators
     class SecurityGenerator < Rails::Generators::Base
+      include McpSiblingTools
+
       source_root File.expand_path("templates", __dir__)
 
       ENVIRONMENTS = %w[development test production].freeze
@@ -141,6 +144,11 @@ module Maquina
         view_files.each { |f| copy_file f, f }
       end
 
+      # 12b. MCP tools (admin only, read-only), when maquina:mcp is installed
+      def create_mcp_tools
+        @mcp_tools_installed = install_mcp_tools(:security)
+      end
+
       # 13. Bundle install
       def run_bundle_install
         return unless rails_app?
@@ -165,6 +173,11 @@ module Maquina
         say "      password: your_password"
         say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
         say "  - Visit #{options[:prefix]}/security"
+        if @mcp_tools_installed
+          say ""
+          say "MCP tools (admin only, read-only): app/models/mcp/tools/security.rb", :green
+          say "  recent_blocks, security_summary"
+        end
         if @replaced_rack_attack
           say ""
           say "config/initializers/rack_attack.rb was replaced with the maquina:rack_attack rules.", :yellow

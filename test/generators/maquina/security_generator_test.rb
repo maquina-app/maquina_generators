@@ -1,5 +1,6 @@
 require "test_helper"
 require "generators/maquina/security/security_generator"
+require "generators/maquina/mcp/mcp_generator"
 
 class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
   tests Maquina::Generators::SecurityGenerator
@@ -33,19 +34,7 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
 
   setup do
     prepare_destination
-
-    mkdir_p("config")
-    File.write(
-      File.join(destination_root, "config/routes.rb"),
-      "Rails.application.routes.draw do\nend\n"
-    )
-
-    File.write(
-      File.join(destination_root, "Gemfile"),
-      "source \"https://rubygems.org\"\n"
-    )
-
-    File.write(File.join(destination_root, "config/database.yml"), DATABASE_YML)
+    write_host_app
   end
 
   test "generates backstage controller with helpers" do
@@ -372,7 +361,130 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
     assert_no_file "app/views/backstage/security/show.html.erb"
   end
 
+  test "writes nothing about MCP without maquina:mcp" do
+    output = run_generator %w[--prefix /admin]
+
+    assert_no_file "app/models/mcp/tools/security.rb"
+    assert_no_file "test/models/mcp/tools/security_test.rb"
+    assert_no_match(/mcp/i, output)
+  end
+
+  test "installs the read-only admin MCP tools when maquina:mcp is present" do
+    write_mcp_registry
+
+    output = run_generator %w[--prefix /admin]
+
+    assert_file "app/models/mcp/tools/security.rb" do |content|
+      assert_match(/module Mcp\n  module Tools\n    module Security\n/, content)
+      assert_match(/ADMIN_ONLY = true/, content)
+      assert_match(/WRITE_TOOLS = %w\[\]\.freeze/, content)
+      %w[recent_blocks security_summary].each do |tool|
+        assert_match(/name: "#{tool}"/, content)
+        assert_match(/def self\.#{tool}\(scope:/, content)
+      end
+      assert_match(/::Security::AbuseEvent\.recent/, content)
+      assert_no_match(/readOnlyHint: false/, content)
+    end
+    assert_file "test/models/mcp/tools/security_test.rb" do |content|
+      assert_match(/users\(:mcp_member\)/, content)
+      assert_match(/-32602/, content)
+    end
+    assert_match(%r{app/models/mcp/tools/security\.rb}, output)
+  end
+
+  test "generated MCP files are valid Ruby" do
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin]
+
+    %w[app/models/mcp/tools/security.rb test/models/mcp/tools/security_test.rb].each do |path|
+      assert RubyVM::InstructionSequence.compile(File.read(File.join(destination_root, path)))
+    end
+  end
+
+  test "keeps an existing MCP tool file" do
+    write_mcp_registry
+    FileUtils.mkdir_p(File.join(destination_root, "app/models/mcp/tools"))
+    File.write(File.join(destination_root, "app/models/mcp/tools/security.rb"), "# custom tools\n")
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/models/mcp/tools/security.rb", "# custom tools\n"
+  end
+
+  test "running twice with maquina:mcp changes nothing the second time" do
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin]
+    first = snapshot
+    run_generator %w[--prefix /admin]
+
+    assert_equal first, snapshot
+  end
+
+  test "running before or after maquina:mcp ends in the same files" do
+    sibling_first = in_fresh_app do
+      run_generator %w[--prefix /admin]
+      run_mcp_generator
+    end
+    mcp_first = in_fresh_app do
+      run_mcp_generator
+      run_generator %w[--prefix /admin]
+    end
+
+    assert sibling_first.key?("app/models/mcp/tools/security.rb")
+    assert sibling_first.key?("test/models/mcp/tools/security_test.rb")
+    # Both generators add routes at the top of the draw block, so only the
+    # order of the routes depends on which ran first.
+    assert_equal sibling_first.delete("config/routes.rb").to_s.lines.sort, mcp_first.delete("config/routes.rb").to_s.lines.sort
+    assert_equal sibling_first, mcp_first
+  end
+
   private
+
+  def write_host_app
+    mkdir_p("config")
+    File.write(
+      File.join(destination_root, "config/routes.rb"),
+      "Rails.application.routes.draw do\nend\n"
+    )
+
+    File.write(
+      File.join(destination_root, "Gemfile"),
+      "source \"https://rubygems.org\"\n"
+    )
+
+    File.write(File.join(destination_root, "config/database.yml"), DATABASE_YML)
+  end
+
+  # app/models/mcp/tools.rb is what tells a sibling generator maquina:mcp ran.
+  def write_mcp_registry
+    FileUtils.mkdir_p(File.join(destination_root, "app/models/mcp"))
+    File.write(File.join(destination_root, "app/models/mcp/tools.rb"), "module Mcp\n  module Tools\n  end\nend\n")
+  end
+
+  # The files an app ends with after the block, from a fresh copy of the host
+  # app that maquina:oauth has run on. Migration timestamps are normalized.
+  def in_fresh_app
+    prepare_destination
+    write_host_app
+    FileUtils.mkdir_p(File.join(destination_root, "app/models"))
+    File.write(File.join(destination_root, "app/models/access_token.rb"), "class AccessToken < ApplicationRecord\nend\n")
+    yield
+    snapshot.to_h do |path, content|
+      [path.gsub(/\d{14}/, "TIMESTAMP"), content.gsub(/\d{4}_\d{2}_\d{2}_\d{6}/, "VERSION")]
+    end
+  end
+
+  def run_mcp_generator
+    capture(:stdout) { Maquina::Generators::McpGenerator.start(["--quiet"], destination_root: destination_root) }
+  end
+
+  def snapshot
+    Dir.glob("**/*", base: destination_root).sort
+      .reject { |path| File.directory?(File.join(destination_root, path)) }
+      .to_h { |path| [path, File.read(File.join(destination_root, path))] }
+  end
 
   def mkdir_p(path)
     FileUtils.mkdir_p(File.join(destination_root, path))

@@ -1,0 +1,43 @@
+<div class="flex flex-1 justify-center px-4 py-8">
+  <div class="w-full max-w-2xl space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold text-foreground"><%= t(".title") %></h1>
+      <p class="mt-1 text-sm text-muted-foreground"><%= t(".description") %></p>
+    </div>
+
+    <% if @connected_applications.empty? %>
+      <div class="bg-card rounded-xl border border-border p-8 text-center">
+        <p class="text-sm text-muted-foreground"><%= t(".empty") %></p>
+      </div>
+    <% else %>
+      <ul class="bg-card rounded-xl border border-border divide-y divide-border">
+        <% @connected_applications.each do |connected_application| %>
+          <% client = connected_application.client %>
+          <li id="<%= dom_id(client, :connected) %>" class="flex flex-wrap items-center gap-4 p-4">
+            <div class="flex-1 min-w-0 space-y-1">
+              <p class="text-sm font-medium text-foreground"><%= client.client_name %></p>
+              <p class="text-xs text-muted-foreground"><%= client.host %></p>
+              <p class="flex flex-wrap gap-1">
+                <% connected_application.scopes.each do |scope| %>
+                  <span data-component="badge" data-variant="secondary" class="text-xs font-medium"><%= t(".scopes.#{scope}") %></span>
+                <% end %>
+              </p>
+            </div>
+
+            <div class="text-xs text-muted-foreground space-y-1">
+              <p><%= t(".connected", date: l(connected_application.connected_at.to_date, format: :long)) %></p>
+              <p>
+                <%= connected_application.last_used_at ? t(".last_used", time: time_ago_in_words(connected_application.last_used_at)) : t(".never_used") %>
+              </p>
+            </div>
+
+            <%= button_to t(".revoke"), connected_app_path(client), method: :delete,
+                  form: { data: { turbo_confirm: t(".revoke_confirm", name: client.client_name) } },
+                  data: { component: "button", variant: "ghost" },
+                  class: "px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+</div>

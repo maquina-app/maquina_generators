@@ -115,6 +115,139 @@ WEBAUTHN_ORIGINS=https://example.com,https://app.example.com
 - **In a browser:** Chrome's virtual authenticator works in DevTools (More tools > WebAuthn) or over CDP (`WebAuthn.addVirtualAuthenticator` with `ctap2`, `internal`, a resident key and user verification). It answers the sign-in page's autofill request on its own, so loading `/session/new` signs you in without a click. To test the button, make `PublicKeyCredential.isConditionalMediationAvailable` return `false`.
 - **Dev server on another port:** set `WEBAUTHN_ORIGINS=http://localhost:<port>`.
 
+### OAuth -- OAuth 2.1 Sign-In for AI Clients
+
+**OAuth** lets AI clients (the MCP Inspector, Claude, any MCP client) sign people in to your app on top of Clave. It is the authorization server behind `maquina:mcp`. Clients identify themselves with a Client ID Metadata Document (CIMD): the `client_id` is an `https` URL whose JSON names the client and its redirect URIs, so there is no dynamic registration and no client secret. Every flow is PKCE (`S256` only), and people sign in with the email code they already use.
+
+No OAuth gem is added: the endpoints, models and fetcher are generated into your app.
+
+#### What it generates
+
+- **Migrations:** `create_oauth_clients`, `create_oauth_authorization_codes`, `create_access_tokens` (refresh tokens live on the access token row)
+- **Models:** `OauthClient` (fetched metadata, refreshed after 24 hours), `OauthAuthorizationCode` (10-minute, single-use, PKCE-checked), `AccessToken` (1-hour access token, rotating refresh token, `read`/`write` scopes; only SHA-256 digests are stored) and `ConnectedApplication`, which groups a person's grants per client
+- **CIMD fetcher:** `OauthClient::MetadataFetcher`, plain `Net::HTTP`. It refuses non-`https` URLs, literal IPs, hosts that resolve to loopback, private, link-local, unspecified or `100.64.0.0/10` addresses, redirects, bodies over 16 KB, responses slower than 3 seconds and documents whose `client_id` does not match
+- **Discovery:** `GET /.well-known/oauth-authorization-server` and `GET /.well-known/oauth-protected-resource/mcp`
+- **Authorize:** `Oauth::AuthorizationsController` at `/oauth/authorize`, the consent screen. A signed-out visitor signs in with Clave and lands back on the exact authorize URL. An unknown client or a redirect URI the client does not list gets an error page and is never redirected
+- **Token and revoke:** `POST /oauth/token` (authorization code and refresh token grants) and `POST /oauth/revoke` (RFC 7009), JSON with `Cache-Control: no-store`
+- **Connected apps:** `ConnectedApplicationsController` at `<prefix>/connected_apps`, where people see each connected client with its scopes and last use, and revoke it. Revoking stops its tokens at once
+- **Gate:** `app/models/mcp.rb` with `Mcp.enabled_for?(user)`, written only if missing. Your app owns it
+- **Rack::Attack:** `/mcp` and `/oauth/token` leave the per-IP throttle and flood ban (they are limited per token and per client instead), plus an `oauth/token/client` throttle of 30 per minute, when `config/initializers/rack_attack.rb` exists
+- **Locale files:** English and Spanish (`config/locales/oauth.*.yml`)
+- **Tests:** fixtures (`oauth_clients`, `oauth_authorization_codes`, `access_tokens`, and `mcp_*` users and account), `OauthTestHelper`, and tests for PKCE, code reuse and expiry, refresh rotation and reuse, `resource` and `iss` checks, the return-to after sign-in and revoking
+
+#### Usage
+
+```bash
+rails g maquina:clave      # first
+rails g maquina:oauth
+rails db:migrate
+```
+
+Anything the generator cannot place safely (a Rack::Attack initializer that no longer has the expected shape) is listed after the install instead of being forced.
+
+#### Options
+
+```bash
+rails g maquina:oauth                       # Full install
+rails g maquina:oauth --skip-views          # Endpoints only; bring your own consent and Connected apps views
+rails g maquina:oauth --prefix /account     # Connected apps at /account/connected_apps (default: /settings)
+rails g maquina:oauth --flag beta_mcp       # Gate consent and Connected apps behind a feature flag
+rails g maquina:oauth --quiet               # No post-install message
+```
+
+#### Feature flag
+
+Without `--flag`, `Mcp.enabled_for?` returns `true` for everyone. With `--flag beta_mcp`, it reads `Rails.application.credentials.features.beta_mcp`, then `ENV["BETA_MCP"]`. When it is off for someone, consent answers `access_denied`, Connected apps is a 404, their MCP tools return nothing and `server/discover` still answers. Replace the method body with Flipper or a column when you need per-user rollout.
+
+### MCP -- Model Context Protocol Server
+
+**MCP** gives your app a standalone [MCP](https://modelcontextprotocol.io) server at `POST /mcp`, signed in through `maquina:oauth`. It speaks protocol `2026-07-28` over plain HTTP: no SSE, no sessions, no `mcp` gem. It ships a `whoami` tool that proves the wiring works, and `maquina:mcp_tool` adds more.
+
+#### What it generates
+
+- **Controller:** `McpController` (`ActionController::API`) with `McpAuthenticatable`, which reads the `Authorization: Bearer` token and checks that it was issued for `<base>/mcp`. A missing or bad token gets 401 with `WWW-Authenticate` pointing at the protected-resource metadata. `GET` and `DELETE /mcp` return 405
+- **Protocol:** `server/discover` (no token needed), `tools/list` and `tools/call`. The `Mcp-Method` and `Mcp-Name` headers must match the body, `params._meta` must carry protocol `2026-07-28`, and the JSON-RPC error codes live in one table in `McpController`. A write tool called with a `read` token gets 403 `insufficient_scope`
+- **Rate limit:** 120 requests per minute per token (per IP without one)
+- **CORS:** `config/initializers/mcp_cors.rb`, a small Rack middleware for `/mcp`, `/oauth/token`, `/oauth/revoke` and `/.well-known/oauth-*` (never `/oauth/authorize`); no `rack-cors`
+- **Registry:** `app/models/mcp/` -- `Mcp::Tools` (dispatch), `Mcp::ToolDefinitions` (what a user sees), `Mcp::ToolError` and `Mcp::UserScope` (the token's user and the records it may reach). Every file in `app/models/mcp/tools/` is a module with `DEFINITIONS`, `WRITE_TOOLS`, `ADMIN_ONLY` and one method per tool. Arguments are checked against the tool's JSON Schema (required keys, types, enums) before dispatch
+- **Tool:** `app/models/mcp/tools/app.rb` with `whoami` (email, granted scope, server and protocol versions, and the flag state with `--flag`), written only if missing
+- **Tests:** `McpTestHelper` (`mcp_post`, `oauth_token_for`), `test/integration/mcp_flow_test.rb` (discover, authorize, consent, token, `whoami`, revoke, 401), `test/integration/mcp_conformance_test.rb` and `test/models/mcp/tools_test.rb`, which fails when a tool that writes is missing from its module's `WRITE_TOOLS`
+
+#### Usage
+
+```bash
+rails g maquina:oauth      # first
+rails g maquina:mcp
+rails db:migrate
+```
+
+Or all at once: `rails g maquina:app --auth clave --mcp`.
+
+#### Options
+
+```bash
+rails g maquina:mcp                     # Full install
+rails g maquina:mcp --flag beta_mcp     # Set the flag in app/models/mcp.rb if it still says FLAG = nil
+rails g maquina:mcp --prefix /account   # The Connected apps prefix you gave maquina:oauth (default: /settings)
+rails g maquina:mcp --skip-views        # You ran maquina:oauth --skip-views: the flow test skips the consent and Connected apps pages
+rails g maquina:mcp --quiet             # No post-install message
+```
+
+#### Connecting a client
+
+Start the app and run the [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
+
+```bash
+bin/dev
+npx @modelcontextprotocol/inspector
+```
+
+Choose the Streamable HTTP transport, enter `http://localhost:3000/mcp` and connect. The Inspector discovers the authorization server, sends you to the consent screen (sign in with your email code if needed), and lists `whoami`. The app then shows up at `/settings/connected_apps`, where revoking it makes the next call answer 401.
+
+#### Operational tools from other generators
+
+When `app/models/mcp/tools.rb` exists, these generators also write an MCP tool module. Every one is `ADMIN_ONLY`: only users with the `admin` role see or call them, and a member's token gets "unknown tool". Lists are capped at 50 rows and times are ISO 8601 UTC.
+
+| Generator | Tool file | Tools |
+|-----------|-----------|-------|
+| `maquina:solid_errors` | `tools/solid_errors.rb` | `list_failures`, `get_failure`, `top_exceptions` (copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` if missing) |
+| `maquina:solid_queue` | `tools/solid_queue.rb` | `queue_status`, `list_failed_jobs`, `get_failed_job` (arguments redacted); `retry_failed_job` with `--mcp-write` |
+| `maquina:security` | `tools/security.rb` | `recent_blocks`, `security_summary` |
+| `maquina:csp_reports` | `tools/csp_reports.rb` | `list_csp_reports`, `csp_report_summary` |
+
+The install order does not matter. A sibling run after `maquina:mcp` writes its own tool file. `maquina:mcp` run after the siblings backfills a tool file for each one it finds (`config/initializers/solid_errors.rb`, `config/solid_queue.yml` or `config/queue.yml`, `app/models/security/abuse_event.rb`, `csp_violations` in `db/security_schema.rb`), using the read-only Solid Queue variant. Existing tool files are never overwritten, and without MCP the siblings write and print nothing about it.
+
+### MCP Tool -- Add a Tool to the MCP Server
+
+**MCP Tool** adds a tool to `app/models/mcp/tools/app.rb`: its JSON Schema definition, a method stub and a test, without editing the registry by hand. It needs `maquina:mcp`.
+
+#### Usage
+
+```bash
+rails g maquina:mcp_tool list_posts status:enum[draft,published]? limit:integer?
+rails g maquina:mcp_tool publish_post id:integer --write
+```
+
+#### Arguments
+
+- `NAME`: lowercase letters, digits and underscores, starting with a letter. A name already in `tools/app.rb` changes nothing; a name in another tool file stops the generator.
+- `name:type`: `string`, `integer`, `number`, `boolean` or `enum[a,b]` (a string limited to those values). A trailing `?` makes the argument optional; every other argument is required.
+
+#### Options
+
+```bash
+rails g maquina:mcp_tool NAME [arg:type ...]           # Read-only tool (readOnlyHint: true)
+rails g maquina:mcp_tool NAME [arg:type ...] --write   # Needs the write scope; added to WRITE_TOOLS
+rails g maquina:mcp_tool NAME --quiet                  # No "Items to finish" message
+```
+
+#### What it generates
+
+- The definition in `DEFINITIONS`, the name in `WRITE_TOOLS` with `--write`, and `def self.<name>(scope:, ...)` that raises `Mcp::ToolError, "<name> is not implemented yet"`. If a marker comment in `tools/app.rb` is gone, the snippet is printed instead.
+- `test/models/mcp/tools/<name>_test.rb`: listed for a `read` token, -32602 for a missing required argument, 403 `insufficient_scope` for a `read` token with `--write`, and a skipped cross-user test (a record owned by `users(:mcp_other)` must come back as not found) to fill in.
+
+Afterwards, write the description for the model (plain English, units stated), the method body (reach records through `scope.records(:posts)` or `scope.find(:posts, id)` so a tool never sees another user's data) and the cross-user test setup.
+
 ### Registration -- Password-Based Authentication with Accounts
 
 **Registration** generates a password-based authentication system with multi-tenant account support. It builds on top of the Rails 8 authentication generator, adding an Account model (tenant), user roles, and a registration flow.
@@ -203,6 +336,10 @@ Credentials are resolved in order:
 1. `Rails.application.credentials.backstage.username` / `.password`
 2. `ENV["SOLID_ERRORS_USER"]` / `ENV["SOLID_ERRORS_PASSWORD"]` (configurable)
 
+#### MCP
+
+With `maquina:mcp` installed, it also writes admin-only MCP tools (`list_failures`, `get_failure`, `top_exceptions`) to `app/models/mcp/tools/solid_errors.rb`. See [Operational tools from other generators](#operational-tools-from-other-generators). The old `--mcp-http` endpoint is gone; `--agent` still generates `bin/failures` and the stdio `bin/failures-mcp`.
+
 ---
 
 ### Mission Control Jobs -- Job Queue Dashboard
@@ -271,7 +408,10 @@ The generator automatically runs `bundle install` and installs migrations.
 ```bash
 rails g maquina:solid_queue                      # Default (sqlite3)
 rails g maquina:solid_queue --database postgresql # PostgreSQL
+rails g maquina:solid_queue --mcp-write           # Also generate the retry_failed_job MCP tool
 ```
+
+With `maquina:mcp` installed, it also writes admin-only MCP tools (`queue_status`, `list_failed_jobs`, `get_failed_job`) to `app/models/mcp/tools/solid_queue.rb`. `--mcp-write` adds `retry_failed_job`, which needs the `write` scope.
 
 ---
 
@@ -427,7 +567,7 @@ Watch the Security page while the policy is report-only, then set `content_secur
 9. Adds turbo morphing, `yield :head`, and simplifies `<main>` tag in layout
 10. Optionally installs authentication (`maquina:clave` or `maquina:registration`)
 11. Invokes sub-generators: `maquina:mission_control_jobs`, `maquina:solid_errors`
-12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`, then `maquina:security` (which installs the `maquina:rack_attack` rules), and `maquina:passkeys` with `--passkeys`
+12. Runs external installers: `solid_queue:install`, `solid_errors:install`, `solid_cache:install`, `solid_cable:install`, `maquina_components:install`, then `maquina:security` (which installs the `maquina:rack_attack` rules), `maquina:passkeys` with `--passkeys`, and `maquina:oauth` plus `maquina:mcp` with `--mcp`
 13. Restores custom layouts overwritten by gem installers
 14. Configures multi-database `database.yml` (primary, queue, cache, cable, errors, security)
 15. Creates a HomeController with root route
@@ -441,6 +581,8 @@ rails g maquina:app
 rails g maquina:app --prefix /backstage --port 3100
 rails g maquina:app --auth registration
 rails g maquina:app --auth clave --passkeys
+rails g maquina:app --auth clave --mcp
+rails g maquina:app --auth clave --mcp --mcp-flag beta_mcp
 ```
 
 #### Options
@@ -449,6 +591,8 @@ rails g maquina:app --auth clave --passkeys
 - `--port` (default: `3000`) -- Default port for the development server
 - `--auth` (default: `none`) -- Authentication type: `none`, `clave`, or `registration`
 - `--passkeys` (default: `false`) -- Adds passkey sign-in with `maquina:passkeys`. It needs `--auth clave` and refuses to run without it. The passkey origin follows `--port`, and the home page links to `/passkeys`.
+- `--mcp` (default: `false`) -- Adds the OAuth-backed MCP server with `maquina:oauth` and `maquina:mcp`, after Security and Passkeys so the Rack::Attack rules and the admin tools from the other generators land. It needs `--auth clave` and refuses to run without it. The README and post-install message point to `/settings/connected_apps` and the MCP Inspector.
+- `--mcp-flag NAME` -- Passed to both as `--flag NAME`, to gate MCP access behind a feature flag.
 
 #### After running
 

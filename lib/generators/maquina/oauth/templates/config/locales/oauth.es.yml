@@ -1,0 +1,34 @@
+es:
+  flash:
+    connected_applications:
+      destroyed: "%{name} ya no puede usar tu cuenta."
+
+  oauth:
+    authorizations:
+      new:
+        title: "¿Permitir que %{client_name} use tu cuenta?"
+        signed_in_as: "Sesión iniciada como %{email}"
+        requested: "Solicita:"
+        scopes:
+          read: "lectura: ver tus datos"
+          write: "escritura: hacer cambios por ti"
+        allow: "Permitir"
+        cancel: "Cancelar"
+      error:
+        title: "Esta app no se puede conectar"
+        unknown_client: "No pudimos verificar esta app. Su dirección no apunta a una descripción de app válida."
+        redirect_mismatch: "Esta app pidió enviarte de vuelta a una dirección que no tiene registrada."
+
+  connected_applications:
+    index:
+      title: "Apps conectadas"
+      description: "Apps a las que permitiste usar tu cuenta, como asistentes de IA. Si revocas una, pierde el acceso de inmediato."
+      empty: "No hay apps conectadas a tu cuenta."
+      scopes:
+        read: "Lectura"
+        write: "Escritura"
+      connected: "Conectada el %{date}"
+      last_used: "Usada por última vez hace %{time}"
+      never_used: "Aún no se ha usado"
+      revoke: "Revocar"
+      revoke_confirm: "¿Revocar %{name}? Perderá el acceso a tu cuenta de inmediato."

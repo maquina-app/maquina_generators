@@ -29,6 +29,9 @@ Your app will be running at **http://localhost:<%= options[:port] %>**.
 <% if options[:passkeys] -%>
 | **Passkeys** | Passkey sign-in with Face ID, a fingerprint or a device PIN; the email code stays as the way in without one |
 <% end -%>
+<% if options[:mcp] -%>
+| **MCP Server** | OAuth 2.1-backed MCP server at `/mcp` for AI clients, with a Connected apps page to revoke them<%= " (gated by the `#{options[:mcp_flag]}` flag)" unless options[:mcp_flag].to_s.empty? %> |
+<% end -%>
 | **Background Jobs** | Solid Queue with Mission Control Jobs dashboard |
 | **Error Tracking** | Solid Errors with custom UI |
 | **Rate Limiting** | Rack::Attack with sensible defaults |
@@ -57,6 +60,10 @@ Your app will be running at **http://localhost:<%= options[:port] %>**.
 <% end -%>
 <% if options[:passkeys] -%>
 | http://localhost:<%= options[:port] %>/passkeys | Passkeys |
+<% end -%>
+<% if options[:mcp] -%>
+| http://localhost:<%= options[:port] %>/settings/connected_apps | Connected apps |
+| http://localhost:<%= options[:port] %>/mcp | MCP endpoint (`npx @modelcontextprotocol/inspector`) |
 <% end -%>
 <% end -%>
 

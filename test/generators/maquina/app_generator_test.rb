@@ -396,6 +396,55 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
     assert_no_match(/passkey/, output)
   end
 
+  test "mcp needs clave" do
+    %w[none registration].each do |auth|
+      error = assert_raises(Thor::Error) { run_generator ["--auth", auth, "--mcp"], debug: true }
+      assert_match(/--mcp builds on clave\. Run with `--auth clave --mcp`\./, error.message)
+    end
+    assert_no_file "Procfile.dev"
+  end
+
+  test "mcp shows up in the README and post-install" do
+    output = run_generator %w[--auth clave --mcp]
+
+    assert_file "README.md" do |content|
+      assert_match(/\*\*MCP Server\*\*/, content)
+      assert_match(%r{localhost:3000/settings/connected_apps \| Connected apps}, content)
+      assert_match(%r{localhost:3000/mcp \|}, content)
+    end
+    assert_match(%r{/settings/connected_apps}, output)
+    assert_match(%r{npx @modelcontextprotocol/inspector}, output)
+    assert_match(%r{http://localhost:3000/mcp}, output)
+  end
+
+  test "mcp flag shows up in the README and post-install" do
+    output = run_generator %w[--auth clave --mcp --mcp-flag beta_mcp]
+
+    assert_file "README.md", /gated by the `beta_mcp` flag/
+    assert_match(/gated by the beta_mcp flag/, output)
+  end
+
+  test "without mcp nothing mentions it" do
+    output = run_generator %w[--auth clave]
+
+    assert_file "README.md" do |content|
+      assert_no_match(/\*\*MCP Server\*\*|connected_apps|\/mcp /, content)
+    end
+    assert_no_match(/connected_apps|modelcontextprotocol/, output)
+  end
+
+  test "installs oauth then mcp after passkeys" do
+    assert_equal [["maquina:oauth", "--quiet"], ["maquina:mcp", "--quiet"]],
+      generated_by_install_mcp(%w[--auth clave --mcp])
+    assert_equal [["maquina:oauth", "--quiet", "--flag", "beta_mcp"], ["maquina:mcp", "--quiet", "--flag", "beta_mcp"]],
+      generated_by_install_mcp(%w[--auth clave --mcp --mcp-flag beta_mcp])
+    assert_empty generated_by_install_mcp(%w[--auth clave])
+
+    steps = Maquina::Generators::AppGenerator.all_commands.keys
+    assert_operator steps.index("install_passkeys"), :<, steps.index("install_mcp")
+    assert_operator steps.index("install_mcp"), :<, steps.index("restore_custom_layouts")
+  end
+
   test "points the passkey origin at a custom development port" do
     initializer = File.join(destination_root, "config/initializers/webauthn.rb")
     File.write(initializer, %(config.allowed_origins = Array(ENV["WEBAUTHN_ORIGINS"]&.split(",") || "http://localhost:3000")\n))
@@ -466,6 +515,15 @@ class Maquina::Generators::AppGeneratorTest < Rails::Generators::TestCase
   end
 
   private
+
+  def generated_by_install_mcp(args)
+    calls = []
+    generator = Maquina::Generators::AppGenerator.new([], args, destination_root: destination_root)
+    generator.define_singleton_method(:rails_app?) { true }
+    generator.define_singleton_method(:generate) { |*generate_args| calls << generate_args }
+    generator.install_mcp
+    calls
+  end
 
   def write_bin_setup
     mkdir_p("bin")

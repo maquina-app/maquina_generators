@@ -1,10 +1,12 @@
 require "rails/generators"
 require "rails/generators/migration"
+require_relative "../mcp/mcp_sibling_tools"
 
 module Maquina
   module Generators
     class CspReportsGenerator < Rails::Generators::Base
       include Rails::Generators::Migration
+      include McpSiblingTools
 
       source_root File.expand_path("templates", __dir__)
 
@@ -130,7 +132,12 @@ module Maquina
         end
       end
 
-      # 9. Post-install message
+      # 9. MCP tools (admin only, read-only), when maquina:mcp is installed
+      def create_mcp_tools
+        @mcp_tools_installed = install_mcp_tools(:csp_reports)
+      end
+
+      # 10. Post-install message
       def show_post_install
         return if options[:quiet]
 
@@ -141,6 +148,11 @@ module Maquina
         say "  - Add the table: bin/rails db:migrate (db:prepare on deploy)"
         say "  - Watch the Security page while the policy is report-only, then set"
         say "    content_security_policy_report_only = false to enforce it."
+        if @mcp_tools_installed
+          say ""
+          say "MCP tools (admin only, read-only): app/models/mcp/tools/csp_reports.rb", :green
+          say "  list_csp_reports, csp_report_summary"
+        end
         if @report_uri_pending
           say ""
           say "Point the policy at the endpoint in config/initializers/content_security_policy.rb:", :yellow

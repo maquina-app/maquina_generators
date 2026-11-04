@@ -1,0 +1,32 @@
+Description:
+  Adds OAuth 2.1 sign-in for MCP clients (the MCP Inspector, Claude, ...) on
+  top of Clave's email-code login. Needs maquina:clave; run maquina:mcp
+  afterwards for the /mcp server the tokens unlock.
+
+  Clients identify themselves with a Client ID Metadata Document: the
+  client_id is an https URL, fetched by a guarded plain-Ruby fetcher that
+  refuses private and loopback addresses, literal IPs, redirects, large or
+  slow answers. There is no dynamic client registration and no client
+  secret; PKCE S256 is required. Installs OauthClient, OauthAuthorizationCode,
+  AccessToken (digests only; refresh tokens rotate and are bound to their
+  client) and ConnectedApplication; the RFC 8414 and RFC 9728 discovery
+  documents; GET/POST /oauth/authorize (the consent screen), POST
+  /oauth/token and POST /oauth/revoke; a Connected apps page to revoke a
+  client; app/models/mcp.rb with the Mcp.enabled_for?(user) gate the app
+  owns; EN/ES locales, fixtures, a test helper and tests. With
+  maquina:rack_attack present, /mcp and /oauth/token leave the per-IP budget
+  and token requests are throttled per client. Anything it cannot place
+  safely is listed after the install instead of being forced.
+
+Options:
+  --prefix PATH    Where Connected apps lives (default /settings, so
+                   /settings/connected_apps)
+  --flag NAME      Gate MCP behind a feature flag read by Mcp.enabled_for?
+                   (credentials features.NAME, then ENV[NAME upcased])
+  --skip-views     Endpoints only; bring your own consent and Connected apps views
+  --quiet          No post-install message
+
+Examples:
+  rails g maquina:oauth
+  rails g maquina:oauth --prefix /account
+  rails g maquina:oauth --flag beta_mcp

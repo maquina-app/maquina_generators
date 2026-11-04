@@ -1,0 +1,36 @@
+<div class="flex flex-1 items-center justify-center px-4 py-8">
+  <div class="w-full max-w-md">
+    <div class="bg-card rounded-xl shadow-sm border border-border p-8 space-y-6">
+      <div class="space-y-2 text-center">
+        <h1 class="text-2xl font-bold text-foreground"><%= t(".title", client_name: @client.client_name) %></h1>
+        <p class="text-sm text-muted-foreground"><%= @client.host %></p>
+      </div>
+
+      <p class="text-sm text-foreground"><%= t(".signed_in_as", email: Current.user.email_address) %></p>
+
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-foreground"><%= t(".requested") %></p>
+        <ul class="space-y-1 text-sm text-muted-foreground">
+          <% @oauth_params[:scope].split.each do |scope| %>
+            <li><%= t(".scopes.#{scope}") %></li>
+          <% end %>
+        </ul>
+      </div>
+
+      <%# A plain form post, not Turbo: the answer is a redirect to the app's own
+          address, which a fetch would refuse to follow across origins. %>
+      <%= form_with url: oauth_authorization_path, method: :post, data: { turbo: false }, class: "flex gap-3" do |form| %>
+        <% @oauth_params.each do |name, value| %>
+          <%= hidden_field_tag name, value, id: nil %>
+        <% end %>
+
+        <%= form.button t(".allow"), name: "decision", value: "allow",
+              data: { component: "button", variant: "primary" },
+              class: "flex-1 px-4 py-3 text-base font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors cursor-pointer" %>
+        <%= form.button t(".cancel"), name: "decision", value: "deny",
+              data: { component: "button", variant: "ghost" },
+              class: "flex-1 px-4 py-3 text-base font-medium text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer" %>
+      <% end %>
+    </div>
+  </div>
+</div>
