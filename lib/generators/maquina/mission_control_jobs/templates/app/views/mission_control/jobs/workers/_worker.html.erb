@@ -15,7 +15,7 @@
         <%= link_to job_title(job), application_job_path(@application, job.job_id),
             class: "text-sm text-foreground hover:text-primary transition-colors" %>
         <% if job.serialized_arguments.present? %>
-          <div class="text-xs font-mono text-muted-foreground"><%= job_arguments(job) %></div>
+          <div class="text-xs font-mono text-muted-foreground whitespace-normal wrap-anywhere line-clamp-2"><%= job_arguments(job) %></div>
         <% end %>
       </div>
     <% end %>

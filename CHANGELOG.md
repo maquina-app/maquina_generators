@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- The admin navigation's tab strip scrolls sideways on a phone, and "Back to app" shrinks to its icon there.
+- Security uses a shield icon in the admin navigation, the overview and the app home page. maquina-components ships no shield, so the SVG is inline.
+
+### Removed
+
+- `Rack::Attack.route_guard?`. The guard is always on, so there is nothing left for it to answer.
+
+### Fixed
+
+- `maquina:rack_attack`'s route guard:
+  - It compared paths without their format, so a request for `/service-worker.js` did not count as the route `/service-worker(.:format)`. The scanner rule refused it and banned visitors within a few page loads. A format Rails knows now counts; `/login.php` is still not `/login`.
+  - It turned itself off for the whole app on any root catch-all, including one constrained to JSON, leaving every real route unprotected. A root catch-all is now left out of the comparison, and the app's other routes stay protected.
+- The Solid Errors detail page no longer raises on an error with more than 10 occurrences. A "Clean Old Occurrences" button called a route that never existed, so the button is gone.
+- The Mission Control job filters submit. They called `form#debouncedSubmit`, which Mission Control doesn't define; they now call `form#submit` when a field changes.
+- Long job arguments and error text wrap, so a long failure no longer pushes Retry and Discard off the page: `overflow-wrap-anywhere` isn't a Tailwind class (`wrap-anywhere`, Tailwind 4.1+, is), the job table's cells needed `whitespace-normal` to override the table's `whitespace-nowrap`, and `block` was turning `line-clamp-2` off.
+- The Solid Errors detail page's header buttons wrap instead of running off the card on a phone.
+
 ## [0.10.0] - 2026-10-21
 
 ### Changed

@@ -1,7 +1,7 @@
 <%# locals: (occurrences:, page:) %>
 
 <%= render "components/card" do %>
-  <%= render "components/card/header", layout: :row do %>
+  <%= render "components/card/header", layout: :row, css_classes: "flex-wrap" do %>
     <%= render "components/card/title", text: "Occurrences" %>
 
     <%= render "components/card/action" do %>
