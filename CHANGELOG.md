@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- `maquina:rack_attack` and `maquina:security` no longer refuse a name that only starts like a scanner path. Most of the scanner patterns had no end, so `/routes-mx`, `/status-page`, `/jobs`, `/files-mx` and `/pma-transportes` were scanner paths, and three such requests banned the address for a week. The route guard can't help an app that serves tenants or handles from the root, because a dynamic root segment doesn't count as the app's own.
+  - Names now match as whole path segments: `/status`, `/status/x` and `/status.json` are scanner paths, and `/status-page` isn't.
+  - An app with tenants at the root should also reserve these names, or an account called exactly `status` is still refused.
+  - Existing apps keep their copy of `rack_attack.rb`, so they need this change applied by hand.
 - `maquina:rack_attack`'s route guard:
   - It compared paths without their format, so a request for `/service-worker.js` did not count as the route `/service-worker(.:format)`. The scanner rule refused it and banned visitors within a few page loads. A format Rails knows now counts; `/login.php` is still not `/login`.
   - It turned itself off for the whole app on any root catch-all, including one constrained to JSON, leaving every real route unprotected. A root catch-all is now left out of the comparison, and the app's other routes stay protected.

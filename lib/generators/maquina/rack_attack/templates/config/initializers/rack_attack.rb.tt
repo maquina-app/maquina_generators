@@ -36,6 +36,11 @@ class Rack::Attack
   # Backup and dump guesses (`/backup.zip`, `/db.sql.gz`, `/site.tar.gz`)
   ARCHIVE_PATH = /\.(zip|rar|7z|tar|tgz|gz|bz2|xz|sql|bak|backup|old)$/i
 
+  # The end of a path segment. Names are matched whole, so /status is a scanner
+  # target and /status-page isn't. An app with tenants at the root should also
+  # reserve these names: the route guard can't protect a dynamic root segment.
+  SEGMENT_END = %r{(?=[/.%]|\z)}
+
   # WordPress paths
   WORDPRESS_PATHS = %w[
     /wp-admin
@@ -82,7 +87,7 @@ class Rack::Attack
   # ASP.NET exposes.
   SERVER_INFO_PATHS = %r{
     (^|/)(server-status|server-info|nginx_status|elmah\.axd|trace\.axd
-      |phpinfo|info\.php)
+      |phpinfo|info\.php)#{SEGMENT_END}
     |
     (^|/)(__debug__|__env\.js|__config\.js)
   }xi
@@ -93,7 +98,7 @@ class Rack::Attack
   # route guard stands them down if it does.
   API_DOC_PATHS = %r{
     (^|/)(swagger\.json|swagger-ui|openapi\.json|openapi\.ya?ml
-      |api-docs|api-docs\.json|graphql\.json)
+      |api-docs|api-docs\.json|graphql\.json)#{SEGMENT_END}
   }xi
 
   # The scanner ban's three knobs.
@@ -176,7 +181,11 @@ class Rack::Attack
   # The name is matched at the root too ("/Dockerfile"), which is where a
   # scanner looks first -- so the pattern is a name, not a path.
   IAC_PATHS = %r{
-    (^|/)(dockerfile|docker-compose|compose)(\.(ya?ml|yml))?
+    (^|/)(dockerfile|docker-compose|compose)#{SEGMENT_END}
+    |
+    (^|/)composer\.(json|lock)
+    |
+    /vendor/composer/
     |
     (^|/)terraform\.(tfstate|tfvars|hcl)
     |
@@ -201,9 +210,10 @@ class Rack::Attack
     (^|/)(
       env\.js|env\.json|runtime-config|runtime_config|settings\.json
       |config\.json|app-config\.json|app\.config\.js|push_config\.json
-      |configuration\.js|settings\.js|constants\.js|environment\.js
+      |configuration\.js|configuration\.json|settings\.js|constants\.js|environment\.js|environment\.json
+      |app\.config\.json
       |manifest\.webmanifest|ngsw\.json|service-worker\.js|sw\.js
-    )
+    )#{SEGMENT_END}
   }xi
 
   # Dotfile credentials: 730 observed events.
@@ -264,10 +274,10 @@ class Rack::Attack
     |
     # Directus (its /graphql is caught by GRAPHQL_PATHS)
     ^/(server/(info|health|ping)|users/me|files|dashboards
-        |collections|schema)
+        |collections|schema)#{SEGMENT_END}
     |
     # Kong
-    ^/(apis|consumers|plugins|routes|services|credentials|targets|status)
+    ^/(apis|consumers|plugins|routes|services|credentials|targets|status)#{SEGMENT_END}
     |
     # Vault
     ^/v1/(sys|auth|secret|identity|health)
@@ -278,16 +288,16 @@ class Rack::Attack
     # Jenkins. "/login" and "/view" are ordinary words in an app's route
     # table, so they are left out: the route guard covers them, and a rule
     # that blocks a real sign-in page is not worth keeping.
-    ^/(script|job|build|api/json|whoAmI|computer|descriptorByName)
+    ^/(script|job|build|api/json|whoAmI|computer|descriptorByName)#{SEGMENT_END}
     |
     # Keycloak
-    ^/(realms|resources|protocol)
+    ^/(realms|resources|protocol)#{SEGMENT_END}
     |
     # Nextcloud / ownCloud
     ^/(index\.php|status\.php|remote\.php|ocs/v[12]|public\.php|core/ajax)
     |
     # SonarQube
-    ^/(api/v2|api/issues|api/webservices|sonar)
+    ^/(api/v2|api/issues|api/webservices|sonar)#{SEGMENT_END}
     |
     # Supabase
     ^/(rest/v1|auth/v1|storage/v1|functions/v1|pg/)
@@ -299,13 +309,20 @@ class Rack::Attack
   # is not under attack for it, and the guard stands the rule down. Set
   # GRAPHQL_IS_ROUTE to true only for an app that serves GraphQL through a root
   # catch-all, which the guard doesn't count as the app's own.
-  GRAPHQL_PATHS = %r{^/(v\d+/)?(api/)?graphql}xi
+  GRAPHQL_PATHS = %r{^/(v\d+/)?(api/)?graphql#{SEGMENT_END}}xi
   GRAPHQL_IS_ROUTE = false
 
   # The encodings a scanner uses to hide a path. Normalising them once means
   # the patterns above match a path however it is spelled.
   ENCODED_DOTS = /%2e/i
   ENCODED_SLASHES = /%2f|%5c|%252f/i
+
+  # Whole path segments: a bare start_with? on "/pma" also refuses /pma-transportes,
+  # and an app that serves tenants from the root would ban their users.
+  def self.under_prefix?(path, prefix)
+    base = prefix.chomp("/")
+    path == prefix || path.start_with?("#{base}/", "#{base}.", "#{base}%")
+  end
 
   def self.scanner_path?(path)
     path = path.to_s.downcase.squeeze("/")
@@ -334,11 +351,11 @@ class Rack::Attack
       path.match?(TRAVERSAL_PATHS) ||
       path.match?(SCANNER_APP_PATHS) ||
       path.match?(GRAPHQL_PATHS) ||
-      WORDPRESS_PATHS.any? { |prefix| path.start_with?(prefix) } ||
+      WORDPRESS_PATHS.any? { |prefix| under_prefix?(path, prefix) } ||
       SENSITIVE_PATTERNS.any? { |dotfile| path.include?(dotfile) } ||
       path.include?("/etc/passwd") ||
       path.include?("/etc/shadow") ||
-      SCANNER_PATHS.any? { |prefix| path.start_with?(prefix) }
+      SCANNER_PATHS.any? { |prefix| under_prefix?(path, prefix) }
   end
 
   # What the general throttle and the flood ban count: every request but
