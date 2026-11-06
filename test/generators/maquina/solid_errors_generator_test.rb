@@ -115,6 +115,52 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     end
   end
 
+  # The strip scrolls by itself on a phone. overflow-x-auto clips vertically too,
+  # so an underline must sit on the tab's own edge rather than a -mb-px overhang.
+  test "navigation tabs scroll sideways on a phone" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
+      assert_match(/min-w-0[^"]*overflow-x-auto/, content)
+      refute_match(/-mb-px/, content)
+      assert_match(/shrink-0 items-center gap-1\.5 whitespace-nowrap border-b-2/, content)
+      assert_match(/"aria-label": "Back to app"/, content)
+    end
+  end
+
+  # maquina-components ships no shield, so icon_for would render nothing.
+  test "navigation gives Security an inline shield" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/layouts/_admin_navigation.html.erb" do |content|
+      assert_match(/<svg[^>]*class="size-4"[^>]*><path d="M20 13c0 5/, content)
+      refute_match(/icon_for\(:slash/, content)
+    end
+    assert_file "app/views/backstage_dashboard/index.html.erb" do |content|
+      assert_match(/<svg[^>]*class="size-5"[^>]*><path d="M20 13c0 5/, content)
+      refute_match(/icon_for\(:slash/, content)
+    end
+  end
+
+  # The button sat behind `occurrences.count > 10`, so the page worked until an
+  # error got busy, then raised on exactly the errors worth reading.
+  test "the error page calls no route that doesn't exist" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/solid_errors/errors/show/_actions.html.erb" do |content|
+      refute_match(/main_app\./, content)
+    end
+  end
+
+  test "long error text wraps with a class Tailwind has" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/solid_errors/errors/show/_error_details.html.erb" do |content|
+      refute_match(/overflow-wrap-anywhere/, content)
+      assert_match(/layout: :row, css_classes: "flex-wrap"/, content)
+    end
+  end
+
   test "navigation includes an Overview tab pointing at the prefix root" do
     run_generator %w[--prefix /admin]
 

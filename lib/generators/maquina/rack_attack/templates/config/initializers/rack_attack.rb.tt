@@ -297,8 +297,8 @@ class Rack::Attack
   #
   # The route guard handles this automatically: an app that serves /graphql
   # is not under attack for it, and the guard stands the rule down. Set
-  # GRAPHQL_IS_ROUTE to true only for an app that serves GraphQL AND has a
-  # catch-all route, where the guard cannot tell the two apart.
+  # GRAPHQL_IS_ROUTE to true only for an app that serves GraphQL through a root
+  # catch-all, which the guard doesn't count as the app's own.
   GRAPHQL_PATHS = %r{^/(v\d+/)?(api/)?graphql}xi
   GRAPHQL_IS_ROUTE = false
 
@@ -362,64 +362,43 @@ class Rack::Attack
   #
   # Two things it will not do:
   #
-  #   * It does not protect a path the app serves ONLY through a catch-all
-  #     (`match "*path"`). With a catch-all, almost every path "matches" the
-  #     app, and the guard would disable itself. So when a catch-all is
-  #     present the guard stands down entirely and the patterns decide.
+  #   * It does not protect a path the app serves ONLY through a root dynamic
+  #     segment or catch-all (`/:slug`, `match "*path"`). Those match nearly any
+  #     path, so `/.env` would look like one of the app's pages. They are left
+  #     out of the comparison and the patterns decide; every other route of the
+  #     app stays protected. A scoped glob ("/app/solid_errors/*path") only
+  #     covers its own prefix and counts.
   #
   #   * It does not protect a path served by another service on the same
   #     domain (a reverse proxy in front, a subdomain). Those are not in the
   #     app's route table.
   #
-  # The route table is read once, on the first request, and cached. It is not
-  # available at initializer time (Rails loads routes after initializers), so
-  # it cannot be resolved when the rules are installed.
-  def self.route_guard?
-    return @route_guard unless @route_guard.nil?
+  # It reads the route table when a pattern has matched, not at initializer
+  # time (Rails loads routes after initializers). If the table cannot be read
+  # the rule goes ahead: the patterns are still the first line.
+  def self.app_route?(path, routes: Rails.application.routes.routes.map { |route| route.path.spec.to_s })
+    segments = path.to_s.downcase.split("/").reject(&:empty?)
+    routes.any? { |route| route_covers?(route.downcase, segments) }
+  rescue StandardError
+    false
+  end
 
-    @route_guard = begin
-      paths = Rails.application.routes.routes.map { |route| route.path.spec.to_s }
-      # A catch-all at the ROOT makes the guard meaningless: every path would
-      # "match" the app, so the guard would disable itself. A scoped glob
-      # ("/app/solid_errors(/*path)") only covers its own prefix and is fine.
-      # The glob can carry the format suffix ("/*path(.:format)"), so match
-      # the segment, not the string.
-      root_catchall = paths.any? do |path|
-        first = path.split("/").reject(&:empty?).first.to_s
-        first.include?("*")
-      end
-      !root_catchall
-    rescue StandardError
-      # If the route table cannot be read, stand down rather than guess: the
-      # patterns are still the first line, and a false block is worse.
-      false
+  def self.route_covers?(route, segments)
+    pattern = route.delete_suffix("(.:format)").split("/").reject(&:empty?)
+    return false if pattern.size != segments.size || pattern.first.to_s.match?(/[:*]/)
+
+    spellings = [segments]
+    spellings << [*segments[0...-1], without_format(segments.last)] if route.end_with?("(.:format)")
+    spellings.any? do |spelling|
+      pattern.zip(spelling).all? { |part, segment| part.start_with?(":") || part.include?("*") || part == segment }
     end
   end
 
-  # Does the app itself route this path? Compares the request path against the
-  # app's route patterns, treating a dynamic segment as a wildcard.
-  #
-  # A dynamic segment at the ROOT is NOT counted as "the app routes this".
-  # A route like "/:slug" matches every single-segment path, so `/.env` and
-  # `/key.pem` would look like the app's own pages and the guard would stand
-  # the rule down for exactly the paths it exists to catch. A root segment
-  # must be a LITERAL to count.
-  def self.app_route?(path)
-    return false unless route_guard?
-
-    segments = path.to_s.downcase.split("/").reject(&:empty?)
-    Rails.application.routes.routes.any? do |route|
-      pattern = route.path.spec.to_s.sub(/\(\.:format\)\z/, "").downcase
-      pattern_segments = pattern.split("/").reject(&:empty?)
-      next false if pattern_segments.size != segments.size
-
-      pattern_segments.each_with_index.all? do |segment, index|
-        next false if index.zero? && segment.start_with?(":")
-        segment.start_with?(":") || segment.include?("*") || segment == segments[index]
-      end
-    end
-  rescue StandardError
-    false
+  # /service-worker.js is the route "/service-worker(.:format)". Only a format
+  # Rails knows counts: /login.php is a scanner's guess even when /login is real.
+  def self.without_format(segment)
+    extension = File.extname(segment.to_s)
+    Mime::Type.lookup_by_extension(extension.delete_prefix(".")) ? segment.delete_suffix(extension) : segment
   end
 
   def self.banned?(ip)

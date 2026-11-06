@@ -1,39 +1,40 @@
 <nav class="border-b border-border bg-background">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-12">
-      <div class="flex items-center gap-6">
-        <span class="text-sm font-semibold text-foreground">Admin</span>
-        <div class="-mb-px flex items-center space-x-4">
+    <div class="flex h-12 items-center justify-between gap-3">
+      <div class="flex min-w-0 flex-1 items-center gap-3 self-stretch sm:gap-6">
+        <span class="shrink-0 text-sm font-semibold text-foreground">Admin</span>
+        <div class="flex min-w-0 gap-4 self-stretch overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <%%= link_to "<%= options[:prefix] %>",
-              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path == '<%= options[:prefix] %>' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+              class: "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium #{request.path == '<%= options[:prefix] %>' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}" do %>
             <%%= icon_for(:layout_dashboard, class: "size-4") %>
             <span>Overview</span>
           <%% end %>
 
           <%%= link_to "<%= options[:prefix] %>/errors",
-              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/errors') ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+              class: "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/errors') ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}" do %>
             <%%= icon_for(:triangle_alert, class: "size-4") %>
             <span>Errors</span>
           <%% end %>
 
           <%%= link_to "<%= options[:prefix] %>/jobs",
-              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/jobs') ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
+              class: "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/jobs') ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}" do %>
             <%%= icon_for(:inbox, class: "size-4") %>
             <span>Jobs</span>
           <%% end %>
 
           <%%= link_to "<%= options[:prefix] %>/security",
-              class: "inline-flex items-center gap-1.5 whitespace-nowrap px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/security') ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}" do %>
-            <%%= icon_for(:slash, class: "size-4") %>
+              class: "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium #{request.path.start_with?('<%= options[:prefix] %>/security') ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
             <span>Security</span>
           <%% end %>
         </div>
       </div>
 
       <%%= link_to main_app.root_path,
-          class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
+          "aria-label": "Back to app",
+          class: "inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors" do %>
         <%%= icon_for(:arrow_left, class: "size-4") %>
-        Back to app
+        <span class="hidden sm:inline">Back to app</span>
       <%% end %>
     </div>
   </div>

@@ -101,18 +101,8 @@ class Maquina::Generators::RackAttackGeneratorTest < Rails::Generators::TestCase
 
     assert_file "config/initializers/rack_attack.rb" do |content|
       assert_match(/def self\.app_route\?/, content)
-      assert_match(/def self\.route_guard\?/, content)
       # The blocklist asks the guard before refusing.
       assert_match(/Rack::Attack\.scanner_path\?\(req\.path\) && !Rack::Attack\.app_route\?\(req\.path\)/, content)
-    end
-  end
-
-  test "the route guard stands down when the app has a root catch-all" do
-    run_generator
-
-    assert_file "config/initializers/rack_attack.rb" do |content|
-      assert_match(/root_catchall/, content)
-      assert_match(/first\.include\?\("\*"\)/, content)
     end
   end
 

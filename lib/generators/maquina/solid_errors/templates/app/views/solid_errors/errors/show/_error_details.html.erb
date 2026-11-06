@@ -22,8 +22,8 @@ error.message,
 "## Backtrace",
 backtrace_data.join("\n")].compact.join("\n") %></pre>
   <%= render "components/card" do %>
-    <%= render "components/card/header", layout: :row do %>
-      <div class="flex items-center gap-3">
+    <%= render "components/card/header", layout: :row, css_classes: "flex-wrap" do %>
+      <div class="flex min-w-0 items-center gap-3">
         <%= render "components/badge", variant: severity_badge_variant(error), size: :sm do %><%= error.severity %><% end %>
 
         <h2 class="text-lg font-semibold text-foreground">
@@ -32,7 +32,7 @@ backtrace_data.join("\n")].compact.join("\n") %></pre>
       </div>
 
       <%= render "components/card/action" do %>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <%= render "components/badge", variant: error.resolved? ? :success : :outline, size: :sm do %><%= error.resolved? ? "Resolved" : "Unresolved" %><% end %>
 
           <button
@@ -75,7 +75,7 @@ backtrace_data.join("\n")].compact.join("\n") %></pre>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
           <div class="min-w-0">
             <span class="text-sm font-medium text-muted-foreground">Project Root</span>
-            <p class="text-xs font-mono text-foreground mt-1 break-all overflow-wrap-anywhere">
+            <p class="text-xs font-mono text-foreground mt-1 break-all wrap-anywhere">
               <%= SolidErrors::BacktraceLine::RAILS_ROOT %>
             </p>
           </div>
@@ -84,7 +84,7 @@ backtrace_data.join("\n")].compact.join("\n") %></pre>
             <span class="text-sm font-medium text-muted-foreground">Gem Paths</span>
             <div class="text-xs font-mono text-foreground mt-1 space-y-1">
               <% Gem.path.each do |path| %>
-                <p class="break-all overflow-wrap-anywhere"><%= path %></p>
+                <p class="break-all wrap-anywhere"><%= path %></p>
               <% end %>
             </div>
           </div>

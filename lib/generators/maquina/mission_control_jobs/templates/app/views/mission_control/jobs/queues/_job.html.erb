@@ -12,7 +12,7 @@
   <% end %>
   <%= render "components/table/cell" do %>
     <% if job.serialized_arguments.present? %>
-      <span class="text-xs font-mono text-muted-foreground"><%= job_arguments(job) %></span>
+      <span class="text-xs font-mono text-muted-foreground whitespace-normal wrap-anywhere line-clamp-2"><%= job_arguments(job) %></span>
     <% end %>
   <% end %>
 <% end %>

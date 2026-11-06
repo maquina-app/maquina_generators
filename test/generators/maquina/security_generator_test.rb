@@ -345,6 +345,8 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
     assert_file "app/views/layouts/_admin_navigation.html.erb" do |result|
       assert_equal 1, result.scan("<span>Security</span>").length
       assert_match(%r{<span>Jobs</span>\n\s*<% end %>\n\n\s*<%= link_to "/admin/security"}, result)
+      assert_match(/<svg[^>]*class="size-4"[^>]*><path d="M20 13c0 5/, result[/<%= link_to "\/admin\/security".*?<% end %>/m])
+      assert_match(/shrink-0 items-center gap-1\.5 whitespace-nowrap border-b-2/, result)
     end
   end
 
