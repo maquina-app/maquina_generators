@@ -267,6 +267,37 @@ class Maquina::Generators::RackAttackRulesTest < ActiveSupport::TestCase
     assert app_route?("/service-worker.js", routes:)
   end
 
+  # An app can serve tenants or handles from the root, where the route guard can't
+  # help: a dynamic root segment doesn't make a path the app's own. So a name that
+  # only starts like a scanner path must not match.
+  SLUG_SHAPED = %w[
+    routes-mx services-mx status-page plugins-mx targets-mx consumers-mx apis-mx credentials-mx files-mx
+    dashboards-mx collections-mx schema-mx script-lab jobs job-mx build-co builder computer-shop realms-co
+    resources-mx protocol-co sonar-co compose-studio composer dockerfile-mx phpinfo-mx graphql-mx
+    server-status-mx swagger-ui-mx api-docs-mx pma-transportes pmarine debug-logistica debugger actuator-mx
+    wp-content-mx wp-login-mx myadmin-mx cgi-bin-mx solr-mx
+  ].freeze
+
+  test "does not refuse a name that only starts like a scanner path" do
+    SLUG_SHAPED.each do |slug|
+      assert_not scanner_path?("/#{slug}"), "/#{slug}"
+      assert_not scanner_path?("/#{slug}/agenda"), "/#{slug}/agenda"
+    end
+  end
+
+  test "still refuses those scanner paths, as a whole segment or with a suffix" do
+    %w[
+      /routes /services/x /status /plugins/x /targets /consumers /apis /files/x /dashboards /collections/x /schema
+      /script /job/x /build/x /computer/api /realms/master /resources/x /protocol/x /sonar /sonar/api
+      /compose.yml /docker-compose.yaml /dockerfile /phpinfo /phpinfo.html /_profiler/phpinfo /graphql /graphql/console
+      /v1/graphql /api/graphql /server-status /server-status/x /swagger-ui/index.html /api-docs/swagger.json
+      /pma /pma/index /debug /debug/vars /debug.log /debug%2Elog /actuator/health /wp-content/uploads/x /wp-admin
+      /wp-config.txt /myadmin/x /cgi-bin/luci /solr/admin /vendor/phpunit/x /users/me
+      /composer.json /composer.lock /vendor/composer/installed.json /config/environment.json /configuration.json
+      /app.config.json /%252fapp%252fdocker-compose%252eyml
+    ].each { |path| assert scanner_path?(path), path }
+  end
+
   test "an unreadable route table leaves the decision to the patterns" do
     refute RULES.app_route?("/api-docs", routes: Object.new)
   end
