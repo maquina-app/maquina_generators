@@ -1,0 +1,19 @@
+class CreateOauthAuthorizationCodes < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :oauth_authorization_codes do |t|
+      t.references :user, null: false, foreign_key: true
+      t.references :oauth_client, null: false, foreign_key: true
+      t.string :code_digest, null: false
+      t.string :code_challenge, null: false
+      t.string :redirect_uri, null: false
+      t.string :scope, null: false
+      t.string :resource, null: false
+      t.datetime :expires_at, null: false
+      t.datetime :used_at
+
+      t.timestamps
+    end
+
+    add_index :oauth_authorization_codes, :code_digest, unique: true
+  end
+end

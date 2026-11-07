@@ -153,6 +153,24 @@ class Maquina::Generators::RackAttackRulesTest < ActiveSupport::TestCase
     assert_empty blocked, "these are app paths and must not be refused"
   end
 
+  # What maquina:oauth and maquina:mcp serve. An AI client that tripped the
+  # scanner ban here would be locked out of the app for a week.
+  OAUTH_PATHS = [
+    "/mcp",
+    "/oauth/authorize",
+    "/oauth/token",
+    "/oauth/revoke",
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/oauth-protected-resource/mcp",
+    "/settings/connected_apps",
+    "/settings/connected_apps/1"
+  ]
+
+  test "does not refuse the OAuth and MCP endpoints" do
+    blocked = OAUTH_PATHS.select { |path| scanner_path?(path) }
+    assert_empty blocked, "maquina:oauth and maquina:mcp serve these"
+  end
+
   test "does not refuse a public key" do
     refute scanner_path?("/public_key.pem")
     refute scanner_path?("/pubkey.pem")

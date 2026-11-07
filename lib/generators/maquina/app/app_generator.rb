@@ -13,12 +13,17 @@ module Maquina
         desc: "Authentication type: none, clave, or registration"
       class_option :passkeys, type: :boolean, default: false,
         desc: "Add passkey sign-in on top of clave (requires --auth clave)"
+      class_option :mcp, type: :boolean, default: false,
+        desc: "Add an OAuth-backed MCP server on top of clave (requires --auth clave)"
+      class_option :mcp_flag, type: :string,
+        desc: "Feature flag that gates MCP access (e.g. beta_mcp)"
 
       # 0. Check options before touching anything
       def check_options
-        return unless options[:passkeys] && options[:auth] != "clave"
+        return if options[:auth] == "clave"
 
-        raise Thor::Error, "--passkeys builds on clave. Run with `--auth clave --passkeys`."
+        raise Thor::Error, "--passkeys builds on clave. Run with `--auth clave --passkeys`." if options[:passkeys]
+        raise Thor::Error, "--mcp builds on clave. Run with `--auth clave --mcp`." if options[:mcp]
       end
 
       # 1. Add gems
@@ -242,6 +247,16 @@ module Maquina
           '"http://localhost:3000"', %("http://localhost:#{options[:port]}")
       end
 
+      # 12d. Install the MCP server (after security and passkeys, so the
+      #      Rack::Attack rules and every sibling tool marker already exist)
+      def install_mcp
+        return unless options[:mcp] && rails_app?
+
+        flag = options[:mcp_flag].to_s.empty? ? [] : ["--flag", options[:mcp_flag]]
+        generate "maquina:oauth", "--quiet", *flag
+        generate "maquina:mcp", "--quiet", *flag
+      end
+
       # 13. Restore custom layouts overwritten by gem installers
       def restore_custom_layouts
         return unless rails_app?
@@ -369,6 +384,12 @@ module Maquina
           if options[:passkeys]
             say "  - Visit /passkeys to add a passkey"
             say "  - Production: set WEBAUTHN_RP_ID and WEBAUTHN_ORIGINS before the first passkey"
+          end
+          if options[:mcp]
+            say "  - Visit /settings/connected_apps to see and revoke connected AI apps"
+            say "  - Connect an MCP client: npx @modelcontextprotocol/inspector"
+            say "    and point it at http://localhost:#{options[:port]}/mcp"
+            say "  - MCP access is gated by the #{options[:mcp_flag]} flag (app/models/mcp.rb)" unless options[:mcp_flag].to_s.empty?
           end
           say "  - Customize: app/controllers/concerns/authentication.rb"
           say "  - Locales: config/locales/"

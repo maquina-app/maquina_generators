@@ -1,0 +1,26 @@
+Description:
+  Adds a tool to the app's MCP server, in app/models/mcp/tools/app.rb.
+  Needs maquina:mcp.
+
+  Writes the tool's JSON Schema into DEFINITIONS, a method stub into
+  Mcp::Tools::App that raises "not implemented yet", and with --write the
+  name into WRITE_TOOLS (so a read-only token gets 403) with
+  readOnlyHint: false. Generates test/models/mcp/tools/NAME_test.rb: the
+  tool is listed, a missing required argument is -32602, a read-only token
+  is refused (--write), and a skipped cross-user test to fill in. Running it
+  again for the same name changes nothing.
+
+  Arguments are name:type, with ? for optional. Types: string, integer,
+  number, boolean, and enum[a,b] (a string limited to those values). Quote
+  them in zsh, where ? and [] are glob characters.
+
+  Afterwards it lists what is left to write: the description the model
+  reads, the method body and the cross-user test.
+
+Options:
+  --write   The tool changes data: it needs the write scope
+  --quiet   Suppress the list of items to finish
+
+Examples:
+  rails g maquina:mcp_tool list_posts 'status:enum[draft,published]?' 'limit:integer?'
+  rails g maquina:mcp_tool publish_post id:integer --write

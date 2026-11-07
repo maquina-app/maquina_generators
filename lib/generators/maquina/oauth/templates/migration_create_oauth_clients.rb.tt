@@ -1,0 +1,14 @@
+class CreateOauthClients < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :oauth_clients do |t|
+      t.string :client_id, null: false
+      t.string :client_name, null: false
+      t.text :redirect_uris, null: false
+      t.datetime :metadata_fetched_at, null: false
+
+      t.timestamps
+    end
+
+    add_index :oauth_clients, :client_id, unique: true
+  end
+end

@@ -1,12 +1,17 @@
 require "rails/generators"
+require_relative "../mcp/mcp_sibling_tools"
 
 module Maquina
   module Generators
     class SolidQueueGenerator < Rails::Generators::Base
+      include McpSiblingTools
+
       source_root File.expand_path("templates", __dir__)
 
       class_option :database, type: :string, default: "sqlite3",
         desc: "Database adapter (sqlite3 uses a separate queue database)"
+      class_option :mcp_write, type: :boolean, default: false,
+        desc: "Add the retry_failed_job MCP write tool to the queue tools (needs maquina:mcp)"
       class_option :quiet, type: :boolean, default: false,
         desc: "Suppress post-install instructions"
 
@@ -74,7 +79,17 @@ module Maquina
         end
       end
 
-      # 7. Post-install message
+      # 7. MCP tools (admin only), when maquina:mcp is installed. Read-only
+      #    unless --mcp-write adds retry_failed_job. An existing tool file is
+      #    kept, so asking for the write tool then only prints what to do.
+      def create_mcp_tools
+        @mcp_tools_installed = install_mcp_tools(:solid_queue, write: options[:mcp_write])
+
+        tools = File.join(destination_root, "app/models/mcp/tools/solid_queue.rb")
+        @mcp_write_pending = options[:mcp_write] && File.exist?(tools) && !File.read(tools).include?("def self.retry_failed_job")
+      end
+
+      # 8. Post-install message
       def show_post_install
         return if options[:quiet]
 
@@ -95,6 +110,16 @@ module Maquina
         say "  - Adjust workers/dispatchers in config/solid_queue.yml"
         say "  - Procfile.dev updated with solid_queue process"
         say ""
+        if @mcp_tools_installed
+          say "MCP tools (admin only): app/models/mcp/tools/solid_queue.rb", :green
+          say "  queue_status, list_failed_jobs, get_failed_job#{", retry_failed_job (needs the write scope)" if options[:mcp_write]}"
+          say ""
+        end
+        if @mcp_write_pending
+          say "app/models/mcp/tools/solid_queue.rb already exists without retry_failed_job.", :yellow
+          say "  Delete it and run `rails g maquina:solid_queue --mcp-write` again to add the write tool."
+          say ""
+        end
       end
 
       private

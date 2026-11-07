@@ -1,8 +1,11 @@
 require "rails/generators"
+require_relative "../mcp/mcp_sibling_tools"
 
 module Maquina
   module Generators
     class SolidErrorsGenerator < Rails::Generators::Base
+      include McpSiblingTools
+
       source_root File.expand_path("templates", __dir__)
 
       class_option :prefix, type: :string, required: true,
@@ -15,8 +18,6 @@ module Maquina
         desc: "Copy custom Solid Errors views to the host app"
       class_option :agent, type: :boolean, default: false,
         desc: "Generate read-only AI-agent triage tooling (bin/failures + stdio MCP server)"
-      class_option :mcp_http, type: :boolean, default: false,
-        desc: "Also expose the MCP server over HTTP behind backstage auth (implies --agent; internet-exposed)"
       class_option :quiet, type: :boolean, default: false,
         desc: "Suppress post-install instructions"
 
@@ -149,17 +150,11 @@ module Maquina
         chmod "bin/failures-mcp", 0o755
       end
 
-      # 12. MCP-over-HTTP endpoint (opt-in, internet-exposed). Mounts the same
-      #     read-only tool surface behind the existing backstage Basic Auth so a
-      #     developer can query a deployed app's failures from their machine.
-      def create_mcp_http_controller
-        return unless options[:mcp_http]
-
-        template "app/controllers/failures_mcp_controller.rb.tt",
-          "app/controllers/failures_mcp_controller.rb"
-
-        route %(match "#{options[:prefix]}/failures/mcp", ) +
-          %(to: "failures_mcp#handle", via: %i[get post delete])
+      # 12. MCP tools (admin only, read-only), when maquina:mcp is installed.
+      #     They call FailureTriage, so the three app/agents query files come
+      #     along even without --agent.
+      def create_mcp_tools
+        @mcp_tools_installed = install_mcp_tools(:solid_errors)
       end
 
       # 13. Bundle install
@@ -196,13 +191,13 @@ module Maquina
         say ""
 
         show_agent_post_install if agent?
-        show_mcp_http_post_install if options[:mcp_http]
+        show_mcp_tools_post_install if @mcp_tools_installed
       end
 
       private
 
       def agent?
-        options[:agent] || options[:mcp_http]
+        options[:agent]
       end
 
       def show_agent_post_install
@@ -227,19 +222,9 @@ module Maquina
         say ""
       end
 
-      def show_mcp_http_post_install
-        say "MCP-over-HTTP endpoint (internet-exposed, read-only):", :green
-        say ""
-        say "  Mounted at #{options[:prefix]}/failures/mcp behind backstage Basic Auth."
-        say "  It self-disables (503) until backstage credentials are set."
-        say ""
-        say "  Register from your machine:", :yellow
-        say "    claude mcp add --transport http failures \\"
-        say "      https://yourapp.com#{options[:prefix]}/failures/mcp \\"
-        say "      --header \"Authorization: Basic $(echo -n user:pass | base64)\""
-        say ""
-        say "  SECURITY: this serves redacted-but-sensitive failure data over the", :red
-        say "  internet. Enable only where intended and put it behind an IP allowlist/VPN."
+      def show_mcp_tools_post_install
+        say "MCP tools (admin only, read-only):", :green
+        say "  app/models/mcp/tools/solid_errors.rb: list_failures, get_failure, top_exceptions"
         say ""
       end
 

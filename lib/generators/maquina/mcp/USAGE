@@ -1,0 +1,35 @@
+Description:
+  Adds an MCP server at POST /mcp for protocol revision 2026-07-28, for
+  clients signed in through maquina:oauth. Needs maquina:oauth. Hand-rolled:
+  no mcp gem and no CORS gem in the app.
+
+  Stateless JSON-RPC: every request carries its protocol version in
+  params._meta and mirrors it, the method and the tool name in the
+  MCP-Protocol-Version, Mcp-Method and Mcp-Name headers. server/discover
+  answers without a token; tools/list and tools/call need a bearer token
+  issued for this server's /mcp. initialize gets a 404 naming 2026-07-28,
+  GET and DELETE get a 405. Tools that change data need the write scope
+  (403 insufficient_scope otherwise). Calls are rate limited per token.
+
+  Installs McpController, the McpAuthenticatable concern, a CORS middleware
+  (config/initializers/mcp_cors.rb), the tool registry in app/models/mcp/
+  (Tools, ToolDefinitions, ToolError, UserScope) and app/models/mcp/tools/app.rb
+  with a whoami tool, written only if missing. Tools reach the token's own
+  user's data through Mcp::UserScope. If solid_errors, solid_queue, security
+  or csp_reports are already installed, their admin-only MCP tools are added
+  too. Generates a test helper (mcp_post, oauth_token_for), an end-to-end
+  flow test, a protocol conformance test and a registry test. Anything it
+  cannot place safely is listed after the install.
+
+Options:
+  --flag NAME     Gate MCP behind a feature flag: rewrites Mcp::FLAG = nil in
+                  app/models/mcp.rb and adds flag-off tests
+  --prefix PATH   Where maquina:oauth put Connected apps (default /settings)
+  --skip-views    maquina:oauth ran with --skip-views; the flow test skips its pages
+  --quiet         Suppress post-install instructions
+
+Examples:
+  rails g maquina:oauth && rails g maquina:mcp
+  rails g maquina:mcp --flag beta_mcp
+
+  Then: npx @modelcontextprotocol/inspector, connect to http://localhost:3000/mcp

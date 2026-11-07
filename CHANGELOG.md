@@ -4,13 +4,49 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `maquina:oauth` generator: OAuth 2.1 sign-in for AI clients on top of `maquina:clave`, which it requires.
+  - Clients identify themselves with a Client ID Metadata Document (an `https` `client_id` URL). There is no dynamic registration and no client secret, and PKCE is `S256` only.
+  - **What it installs:**
+    - `OauthClient`, `OauthAuthorizationCode` (10 minutes, single use) and `AccessToken` (1-hour access token, rotating refresh token, `read`/`write` scopes, only digests stored), with their migrations.
+    - Discovery at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/mcp`.
+    - A consent screen at `/oauth/authorize`, plus `POST /oauth/token` and `POST /oauth/revoke`.
+    - A Connected apps page at `/settings/connected_apps` (`--prefix` to change) to see and revoke clients.
+    - `app/models/mcp.rb` with `Mcp.enabled_for?(user)`, owned by the app. `--flag NAME` gates it on `credentials.features.<name>` or `ENV["<NAME>"]`.
+    - EN/ES locales, fixtures, a test helper and tests for PKCE, code reuse and expiry, refresh rotation, `resource`, `iss` and the return-to after sign-in.
+  - **Security choices:**
+    - The metadata fetcher refuses non-`https` URLs, literal IPs, hosts that resolve to loopback, private, link-local, unspecified (`0.0.0.0`, `::`) or `100.64.0.0/10` addresses, redirects, bodies over 16 KB and responses slower than 3 seconds.
+    - An unknown client or an unlisted `redirect_uri` gets an error page, never a redirect.
+    - Rack::Attack exempts `/mcp` and `/oauth/token` from the per-IP throttle and flood ban, and adds an `oauth/token/client` throttle.
+    - No token, code or `Authorization` header is ever logged.
+- `maquina:mcp` generator: a standalone MCP server at `POST /mcp` (protocol `2026-07-28`, plain HTTP, no SSE or sessions), signed in through `maquina:oauth`, which it requires. It adds no gem.
+  - `McpController` and `McpAuthenticatable` check the bearer token and its `resource`, enforce the `Mcp-Method`/`Mcp-Name` headers and the protocol version, and rate-limit to 120 requests per minute per token.
+  - A hand-written CORS middleware in `config/initializers/mcp_cors.rb`.
+  - A tool registry in `app/models/mcp/` that checks arguments against each tool's schema, refuses write tools to a `read` token with 403 `insufficient_scope`, and hides admin-only tools from members.
+  - A `whoami` tool, a test helper, an end-to-end flow test and a conformance test.
+  - The post-install message prints the Connected apps path and the `npx @modelcontextprotocol/inspector` check against `http://localhost:3000/mcp`.
+- `maquina:mcp_tool NAME [arg:type ...] [--write]` generator: adds a tool's schema, a method stub and a test to `app/models/mcp/tools/app.rb`. Types are `string`, `integer`, `number`, `boolean` and `enum[a,b]`; a `?` suffix makes an argument optional.
+- Admin-only MCP tools from the operational generators, written when `maquina:mcp` is installed:
+  - `maquina:solid_errors`: `list_failures`, `get_failure`, `top_exceptions`.
+  - `maquina:solid_queue`: `queue_status`, `list_failed_jobs`, `get_failed_job`, and `retry_failed_job` with the new `--mcp-write` option.
+  - `maquina:security`: `recent_blocks`, `security_summary`.
+  - `maquina:csp_reports`: `list_csp_reports`, `csp_report_summary`.
+  - The install order does not matter: `maquina:mcp` run later backfills the tools for every sibling it finds (the read-only Solid Queue variant).
+- `--mcp` and `--mcp-flag NAME` options for `maquina:app`. They run `maquina:oauth` and `maquina:mcp` after `maquina:security` and `maquina:passkeys`, so the Rack::Attack rules and the admin tools land.
+  - `--mcp` needs `--auth clave` and stops before changing anything without it.
+  - The README and post-install message point to `/settings/connected_apps` and the MCP Inspector.
+
 ### Changed
 
+- `maquina:solid_errors` copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` when MCP is installed, even without `--agent`, because its MCP tools use them. `--agent`, `bin/failures` and `bin/failures-mcp` are unchanged.
+- `maquina:solid_queue` copies `ErrorRedactor` into `app/agents/` when MCP is installed, to redact job arguments.
 - The admin navigation's tab strip scrolls sideways on a phone, and "Back to app" shrinks to its icon there.
 - Security uses a shield icon in the admin navigation, the overview and the app home page. maquina-components ships no shield, so the SVG is inline.
 
 ### Removed
 
+- `maquina:solid_errors --mcp_http` and the `FailuresMcpController` it generated at `<prefix>/failures/mcp` behind backstage Basic Auth. The OAuth-backed server is now the only internet-facing MCP surface. Apps generated with it keep their files, which go on working until you delete them. Use `maquina:mcp` instead: with it installed, `maquina:solid_errors` gives admins the same failure tools.
 - `Rack::Attack.route_guard?`. The guard is always on, so there is nothing left for it to answer.
 
 ### Fixed

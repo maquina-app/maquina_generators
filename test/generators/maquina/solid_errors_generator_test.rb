@@ -1,5 +1,6 @@
 require "test_helper"
 require "generators/maquina/solid_errors/solid_errors_generator"
+require "generators/maquina/mcp/mcp_generator"
 
 class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCase
   tests Maquina::Generators::SolidErrorsGenerator
@@ -7,17 +8,7 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
 
   setup do
     prepare_destination
-
-    mkdir_p("config")
-    File.write(
-      File.join(destination_root, "config/routes.rb"),
-      "Rails.application.routes.draw do\nend\n"
-    )
-
-    File.write(
-      File.join(destination_root, "Gemfile"),
-      "source \"https://rubygems.org\"\n"
-    )
+    write_host_app
   end
 
   test "generates backstage controller" do
@@ -366,48 +357,135 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     end
   end
 
-  test "does not generate MCP-over-HTTP controller without --mcp-http" do
+  test "has no --mcp-http option or HTTP MCP controller" do
+    refute Maquina::Generators::SolidErrorsGenerator.class_options.key?(:mcp_http)
+
     run_generator %w[--prefix /admin --agent]
 
     assert_no_file "app/controllers/failures_mcp_controller.rb"
     assert_file "config/routes.rb" do |content|
-      assert_no_match(/failures_mcp#handle/, content)
+      assert_no_match(/failures_mcp/, content)
     end
   end
 
-  test "generates MCP-over-HTTP controller and route with --mcp-http" do
-    run_generator %w[--prefix /admin --mcp-http]
+  test "writes nothing about MCP without maquina:mcp" do
+    output = run_generator %w[--prefix /admin]
 
-    assert_file "app/controllers/failures_mcp_controller.rb" do |content|
-      assert_match(/class FailuresMcpController < ActionController::Base/, content)
-      assert_match(/skip_forgery_protection/, content)
-      assert_match(/StreamableHTTPTransport/, content)
-      assert_match(/credentials\.backstage/, content)
-      assert_match(/secure_compare/, content)
-      assert_match(/head :service_unavailable/, content)
-    end
-    assert_file "config/routes.rb",
-      %r{match "/admin/failures/mcp", to: "failures_mcp#handle", via: %i\[get post delete\]}
+    assert_no_file "app/models/mcp/tools/solid_errors.rb"
+    assert_no_file "test/models/mcp/tools/solid_errors_test.rb"
+    assert_no_file "app/agents/failure_triage.rb"
+    assert_no_match(/mcp/i, output)
   end
 
-  test "mcp-http controller uses configured auth env vars" do
-    run_generator %w[--prefix /admin --mcp-http --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD]
+  test "installs the admin-only MCP tools and the query layer they call when maquina:mcp is present" do
+    write_mcp_registry
 
-    assert_file "app/controllers/failures_mcp_controller.rb" do |content|
-      assert_match(/ENV\["ADMIN_USER"\]/, content)
-      assert_match(/ENV\["ADMIN_PASSWORD"\]/, content)
+    output = run_generator %w[--prefix /admin]
+
+    assert_file "app/models/mcp/tools/solid_errors.rb" do |content|
+      assert_match(/module Mcp\n  module Tools\n    module SolidErrors/, content)
+      assert_match(/ADMIN_ONLY = true/, content)
+      assert_match(/WRITE_TOOLS = %w\[\]\.freeze/, content)
+      %w[list_failures get_failure top_exceptions].each do |tool|
+        assert_match(/name: "#{tool}"/, content)
+        assert_match(/def self\.#{tool}\(scope:/, content)
+      end
+      assert_match(/::FailureTriage\.overview/, content)
+      assert_match(/clamp\(1, MAX_LIMIT\)/, content)
+      assert_no_match(/readOnlyHint: false/, content)
+    end
+    assert_file "test/models/mcp/tools/solid_errors_test.rb" do |content|
+      assert_match(/users\(:mcp_member\)/, content)
+      assert_match(/-32602/, content)
+      assert_match(/tools\/list/, content)
+    end
+    assert_file "app/agents/error_redactor.rb", /class ErrorRedactor/
+    assert_file "app/agents/errors_query.rb", /class ErrorsQuery/
+    assert_file "app/agents/failure_triage.rb", /class FailureTriage/
+    assert_no_file "app/agents/list_failures_tool.rb"
+    assert_no_file "bin/failures"
+    assert_file "Gemfile" do |content|
+      assert_no_match(/gem "mcp"/, content)
+    end
+    assert_match(%r{app/models/mcp/tools/solid_errors\.rb}, output)
+  end
+
+  test "generated MCP files are valid Ruby" do
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin]
+
+    %w[app/models/mcp/tools/solid_errors.rb test/models/mcp/tools/solid_errors_test.rb].each do |path|
+      assert RubyVM::InstructionSequence.compile(File.read(File.join(destination_root, path)))
     end
   end
 
-  test "--mcp-http implies --agent" do
-    run_generator %w[--prefix /admin --mcp-http]
+  test "installs the MCP tools alongside --agent" do
+    write_mcp_registry
 
-    assert_file "app/agents/failure_triage.rb"
+    run_generator %w[--prefix /admin --agent]
+
+    assert_file "app/models/mcp/tools/solid_errors.rb"
+    assert_file "app/agents/list_failures_tool.rb"
     assert_file "bin/failures-mcp"
-    assert_file "Gemfile", /gem "mcp"/
+  end
+
+  test "keeps an existing MCP tool file and agent files" do
+    write_mcp_registry
+    mkdir_p("app/models/mcp/tools")
+    mkdir_p("app/agents")
+    File.write(File.join(destination_root, "app/models/mcp/tools/solid_errors.rb"), "# custom tools\n")
+    File.write(File.join(destination_root, "app/agents/error_redactor.rb"), "# custom redactor\n")
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/models/mcp/tools/solid_errors.rb", "# custom tools\n"
+    assert_file "app/agents/error_redactor.rb", "# custom redactor\n"
+    assert_file "app/agents/failure_triage.rb", /class FailureTriage/
+  end
+
+  test "running twice with maquina:mcp changes nothing the second time" do
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin]
+    first = snapshot
+    run_generator %w[--prefix /admin]
+
+    assert_equal first, snapshot
+  end
+
+  test "running before or after maquina:mcp ends in the same files" do
+    sibling_first = in_fresh_app do
+      run_generator %w[--prefix /admin]
+      run_mcp_generator
+    end
+    mcp_first = in_fresh_app do
+      run_mcp_generator
+      run_generator %w[--prefix /admin]
+    end
+
+    assert sibling_first.key?("app/models/mcp/tools/solid_errors.rb")
+    assert sibling_first.key?("test/models/mcp/tools/solid_errors_test.rb")
+    # Both generators add routes at the top of the draw block, so only the
+    # order of the routes depends on which ran first.
+    assert_equal sibling_first.delete("config/routes.rb").to_s.lines.sort, mcp_first.delete("config/routes.rb").to_s.lines.sort
+    assert_equal sibling_first, mcp_first
   end
 
   private
+
+  def write_host_app
+    mkdir_p("config")
+    File.write(
+      File.join(destination_root, "config/routes.rb"),
+      "Rails.application.routes.draw do\nend\n"
+    )
+
+    File.write(
+      File.join(destination_root, "Gemfile"),
+      "source \"https://rubygems.org\"\n"
+    )
+  end
 
   def write_application_job
     mkdir_p("app/jobs")
@@ -415,6 +493,35 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
       File.join(destination_root, "app/jobs/application_job.rb"),
       "class ApplicationJob < ActiveJob::Base\nend\n"
     )
+  end
+
+  # app/models/mcp/tools.rb is what tells a sibling generator maquina:mcp ran.
+  def write_mcp_registry
+    mkdir_p("app/models/mcp")
+    File.write(File.join(destination_root, "app/models/mcp/tools.rb"), "module Mcp\n  module Tools\n  end\nend\n")
+  end
+
+  # The files an app ends with after the block, from a fresh copy of the host
+  # app that maquina:oauth has run on. Migration timestamps are normalized.
+  def in_fresh_app
+    prepare_destination
+    write_host_app
+    FileUtils.mkdir_p(File.join(destination_root, "app/models"))
+    File.write(File.join(destination_root, "app/models/access_token.rb"), "class AccessToken < ApplicationRecord\nend\n")
+    yield
+    snapshot.to_h do |path, content|
+      [path.gsub(/\d{14}/, "TIMESTAMP"), content.gsub(/\d{4}_\d{2}_\d{2}_\d{6}/, "VERSION")]
+    end
+  end
+
+  def run_mcp_generator
+    capture(:stdout) { Maquina::Generators::McpGenerator.start(["--quiet"], destination_root: destination_root) }
+  end
+
+  def snapshot
+    Dir.glob("**/*", base: destination_root).sort
+      .reject { |path| File.directory?(File.join(destination_root, path)) }
+      .to_h { |path| [path, File.read(File.join(destination_root, path))] }
   end
 
   def mkdir_p(path)
