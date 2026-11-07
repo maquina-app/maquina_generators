@@ -92,7 +92,6 @@ class Mcp::Tools::SecurityTest < ActionDispatch::IntegrationTest
     result["structuredContent"]
   end
 
-
   def listed_tools(user)
     mcp_post({jsonrpc: "2.0", id: 1, method: "tools/list", params: {}}, token: oauth_token_for(user, scope: "read write"))
     response.parsed_body.dig("result", "tools").map { |tool| tool["name"] }
