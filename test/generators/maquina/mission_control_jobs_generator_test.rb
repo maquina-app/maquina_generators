@@ -140,6 +140,29 @@ class Maquina::Generators::MissionControlJobsGeneratorTest < Rails::Generators::
     assert_file "config/routes.rb", %r{get "/admin" => "backstage_dashboard#index"}
   end
 
+  # Mission Control's own form controller has submit, and no debouncedSubmit.
+  test "the job filters call an action Mission Control defines" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/views/mission_control/jobs/jobs/_filters.html.erb" do |content|
+      assert_match(/controller: "form", action: "change->form#submit"/, content)
+      refute_match(/debouncedSubmit/, content)
+    end
+  end
+
+  test "long job arguments wrap with a class Tailwind has" do
+    run_generator %w[--prefix /admin]
+
+    # Table cells are whitespace-nowrap, which beats wrap-anywhere: without
+    # whitespace-normal a long error pushes Retry and Discard off the page.
+    %w[shared/_job jobs/_job queues/_job workers/_worker jobs/failed/_job].each do |path|
+      assert_file "app/views/mission_control/jobs/#{path}.html.erb" do |content|
+        assert_match(/whitespace-normal wrap-anywhere/, content, path)
+        refute_match(/overflow-wrap-anywhere/, content, path)
+      end
+    end
+  end
+
   test "does not overwrite existing admin navigation" do
     mkdir_p("app/views/layouts")
     File.write(

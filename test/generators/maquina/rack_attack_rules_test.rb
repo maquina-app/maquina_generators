@@ -3,6 +3,8 @@ require "generators/maquina/rack_attack/rack_attack_generator"
 require "erb"
 # The template uses ActiveSupport's duration helpers (7.days, 10.minutes).
 require "active_support/core_ext/integer/time"
+# The route guard asks Mime which formats Rails knows.
+require "action_dispatch"
 # Behavioural tests for the Rack::Attack scanner-path rules.
 #
 # The other rack_attack test asserts on the generated TEXT. This one renders
@@ -203,34 +205,69 @@ class Maquina::Generators::RackAttackRulesTest < ActiveSupport::TestCase
     assert_equal false, RULES::GRAPHQL_IS_ROUTE
   end
 
-  test "exposes the route guard" do
-    assert_respond_to RULES, :app_route?
-    assert_respond_to RULES, :route_guard?
+  # --- the route guard ------------------------------------------------------
+
+  ROUTES = [
+    "/session(.:format)",
+    "/service-worker(.:format)",
+    "/api-docs(.:format)",
+    "/posts/:id(.:format)",
+    "/app/errors/*path(.:format)",
+    "/skills/mcp/SKILL.md(.:format)"
+  ].freeze
+
+  def app_route?(path, routes: ROUTES)
+    RULES.app_route?(path, routes:)
   end
 
-  # A route like "/:slug" matches every single-segment path, so `/.env` and
-  # `/key.pem` would look like the app's own pages and the guard would stand
-  # the rule down for exactly the paths it exists to catch. Every app in the
-  # fleet has such a route ("/:handle", "/:slug", "/:id").
+  test "the guard owns a route the app serves" do
+    assert app_route?("/api-docs")
+    assert app_route?("/posts/1")
+    assert app_route?("/app/errors/a")
+    refute app_route?("/.env")
+    refute app_route?("/wp-login.php")
+  end
+
+  test "a format Rails knows counts as the route" do
+    assert app_route?("/service-worker.js")
+    assert app_route?("/api-docs.json")
+    assert app_route?("/skills/mcp/SKILL.md")
+  end
+
+  # These are the guesses a scanner makes, and /session is a real route.
+  test "a format Rails doesn't know does not" do
+    refute app_route?("/session.php")
+    refute app_route?("/session.env")
+    refute app_route?("/session.pem")
+  end
+
+  # Registered on every page of a PWA, and it matches CONFIG_DUMP_PATHS: without
+  # the guard, three page loads ban the visitor for a week.
+  test "the service worker is a scanner path that the guard stands down" do
+    assert scanner_path?("/service-worker.js")
+    assert app_route?("/service-worker.js")
+  end
+
   test "a dynamic root segment does not make a path the app's own" do
-    # The guard reads the app's route table, which a generator test has no
-    # access to. The rule it applies is exercised here against a stand-in
-    # route table, so the behaviour is checked rather than the source text.
     routes = ["/:slug(.:format)", "/posts/:id(.:format)"]
-    segments = "/.env".downcase.split("/").reject(&:empty?)
 
-    matched = routes.any? do |route|
-      pattern = route.sub(/\(\.:format\)\z/, "").downcase
-      pattern_segments = pattern.split("/").reject(&:empty?)
-      next false if pattern_segments.size != segments.size
+    refute app_route?("/.env", routes:)
+    refute app_route?("/key.pem", routes:)
+    assert app_route?("/posts/1", routes:)
+  end
 
-      pattern_segments.each_with_index.all? do |segment, index|
-        next false if index.zero? && segment.start_with?(":")
+  # A catch-all used to switch the guard off for the whole app.
+  test "a root catch-all does not own a path, and the other routes stay protected" do
+    routes = [*ROUTES, "/*path(.:format)"]
 
-        segment.start_with?(":") || segment.include?("*") || segment == segments[index]
-      end
-    end
+    refute app_route?("/.env", routes:)
+    refute app_route?("/secrets.json", routes:)
+    refute app_route?("/a/b", routes:)
+    assert app_route?("/api-docs", routes:)
+    assert app_route?("/service-worker.js", routes:)
+  end
 
-    refute matched, "a dynamic root segment must not make /.env the app's own route"
+  test "an unreadable route table leaves the decision to the patterns" do
+    refute RULES.app_route?("/api-docs", routes: Object.new)
   end
 end
