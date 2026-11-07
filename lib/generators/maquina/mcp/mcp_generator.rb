@@ -1,10 +1,12 @@
 require "rails/generators"
 require_relative "mcp_sibling_tools"
+require_relative "../backstage_signin/backstage_signin"
 
 module Maquina
   module Generators
     class McpGenerator < Rails::Generators::Base
       include McpSiblingTools
+      include BackstageSignin
 
       source_root File.expand_path("templates", __dir__)
 
@@ -63,6 +65,12 @@ module Maquina
         copy_file "app/models/mcp/tools/app.rb", "app/models/mcp/tools/app.rb"
       end
 
+      # 5b. Who sees the admin-only tools: User#backstage_access?, the same
+      #     backstage.emails list that opens the backstage.
+      def add_backstage_access
+        add_backstage_access_to_user
+      end
+
       # 6. Tools from generators that ran before MCP existed
       def install_sibling_tools
         @sibling_tools = backfill_sibling_mcp_tools
@@ -117,6 +125,16 @@ module Maquina
         if @sibling_tools.present?
           say "Installed MCP tools for: #{@sibling_tools.join(", ")} (admin only)", :yellow
           say ""
+        end
+        say "Admin-only tools are for people on the backstage list (User#backstage_access?):", :yellow
+        say "  backstage:"
+        say "    emails:"
+        say "      - you@example.com"
+        say "  in bin/rails credentials:edit. An account's admin role is not enough."
+        say ""
+        if backstage_signin_pending.any?
+          say "Add User.backstage_emails and User#backstage_access? to app/models/user.rb by hand:", :yellow
+          say backstage_access_methods
         end
         if options[:flag]
           say "MCP is behind the #{options[:flag]} flag (Mcp.enabled_for? in app/models/mcp.rb). Turn it on with", :yellow

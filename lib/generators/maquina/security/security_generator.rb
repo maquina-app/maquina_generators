@@ -1,4 +1,5 @@
 require "rails/generators"
+require_relative "../backstage_signin/backstage_signin"
 require "generators/maquina/rack_attack/rack_attack_generator"
 require_relative "../mcp/mcp_sibling_tools"
 
@@ -6,6 +7,7 @@ module Maquina
   module Generators
     class SecurityGenerator < Rails::Generators::Base
       include McpSiblingTools
+      include BackstageSignin
 
       source_root File.expand_path("templates", __dir__)
 
@@ -24,6 +26,8 @@ module Maquina
         desc: "Path whose POSTs the login throttle counts"
       class_option :copy_views, type: :boolean, default: true,
         desc: "Copy the Security dashboard views to the host app"
+      class_option :mcp_write, type: :boolean, default: false,
+        desc: "Add the unban_address MCP write tool to the security tools (needs maquina:mcp)"
       class_option :quiet, type: :boolean, default: false,
         desc: "Suppress post-install instructions"
 
@@ -144,9 +148,21 @@ module Maquina
         view_files.each { |f| copy_file f, f }
       end
 
-      # 12b. MCP tools (admin only, read-only), when maquina:mcp is installed
+      # 12b. MCP tools (admin only), when maquina:mcp is installed. Read-only
+      #      unless --mcp-write adds unban_address, which calls
+      #      Rack::Attack.unban!: an initializer from before that method gets it.
       def create_mcp_tools
-        @mcp_tools_installed = install_mcp_tools(:security)
+        @mcp_tools_installed = install_mcp_tools(:security, write: options[:mcp_write])
+        @mcp_write_pending = mcp_write_pending?(:security)
+
+        tools = File.join(destination_root, "app/models/mcp/tools/security.rb")
+        add_rack_attack_unban if File.exist?(tools) && File.read(tools).include?("def self.unban_address")
+      end
+
+      # The backstage behind the app's Clave sign-in instead of Basic Auth,
+      # when Clave is installed (BackstageSignin).
+      def put_backstage_behind_signin
+        @backstage_signin = install_backstage_signin
       end
 
       # 13. Bundle install
@@ -167,16 +183,32 @@ module Maquina
         say ""
         say "Next steps:", :yellow
         say "  - Create the security database: bin/rails db:prepare"
-        say "  - Set credentials: bin/rails credentials:edit"
-        say "    backstage:"
-        say "      username: your_user"
-        say "      password: your_password"
-        say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        if @backstage_signin
+          say_backstage_access
+        else
+          say "  - Set credentials: bin/rails credentials:edit"
+          say "    backstage:"
+          say "      username: your_user"
+          say "      password: your_password"
+          say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        end
+        say_backstage_signin_pending if @backstage_signin
         say "  - Visit #{options[:prefix]}/security"
         if @mcp_tools_installed
           say ""
-          say "MCP tools (admin only, read-only): app/models/mcp/tools/security.rb", :green
-          say "  recent_blocks, security_summary"
+          say "MCP tools (admin only): app/models/mcp/tools/security.rb", :green
+          say "  recent_blocks, security_summary#{", unban_address (needs the write scope)" if options[:mcp_write]}"
+        end
+        if @mcp_write_pending
+          say ""
+          say "app/models/mcp/tools/security.rb already exists without unban_address.", :yellow
+          say "  Delete it and run `rails g maquina:security --prefix #{options[:prefix]} --mcp-write` again to add it."
+        end
+        if @unban_pending
+          say ""
+          say "unban_address calls Rack::Attack.unban!, which config/initializers/rack_attack.rb does not define.", :yellow
+          say "  Add it inside `class Rack::Attack`:"
+          say unban_method.gsub(/^\n/, "")
         end
         if @replaced_rack_attack
           say ""
@@ -199,6 +231,31 @@ module Maquina
       end
 
       private
+
+      # The end of Rack::Attack.banned? as maquina:rack_attack writes it.
+      BANNED_METHOD_END = /^    Fail2Ban\.banned\?\("scanner:\#\{ip\}"\) \|\| Allow2Ban\.banned\?\("flood:\#\{ip\}"\)\n  end\n/
+
+      def add_rack_attack_unban
+        path = "config/initializers/rack_attack.rb"
+        full_path = File.join(destination_root, path)
+        content = File.exist?(full_path) ? File.read(full_path) : ""
+        return if content.include?("def self.unban!")
+        return @unban_pending = true unless content.match?(BANNED_METHOD_END)
+
+        inject_into_file path, unban_method, after: BANNED_METHOD_END
+      end
+
+      def unban_method
+        <<-RUBY
+
+  # Lifts both bans and clears their strike counts, for an address banned by
+  # mistake. The refusals already recorded stay in the security database.
+  def self.unban!(ip)
+    Fail2Ban.reset("scanner:\#{ip}", findtime: SCANNER_FINDTIME)
+    Allow2Ban.reset("flood:\#{ip}", findtime: GENERAL_PERIOD)
+  end
+        RUBY
+      end
 
       def rails_app?
         File.exist?(File.join(destination_root, "bin/rails"))

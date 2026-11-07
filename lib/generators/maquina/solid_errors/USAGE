@@ -6,6 +6,9 @@ Description:
 
   Authentication tries Rails credentials (backstage.username/password)
   first, then falls back to environment variables.
+  With Clave installed, the backstage is behind the app's sign-in instead:
+  users listed under backstage.emails in credentials get in, anyone else
+  gets a 404, and the Basic Auth is taken out of the files it wrote.
 
   Regardless of options, ApplicationJob is patched to tag reported errors
   with the job class, arguments, and id, so background-job failures appear
@@ -18,8 +21,10 @@ Description:
 
   When maquina:mcp is installed (app/models/mcp/tools.rb exists), it also
   writes app/models/mcp/tools/solid_errors.rb: the read-only MCP tools
-  list_failures, get_failure and top_exceptions, visible only to admin users
-  of the OAuth-backed /mcp server. They call FailureTriage, so
+  list_failures, get_failure and top_exceptions, visible only to users on the
+  backstage list (User#backstage_access?) through the OAuth-backed /mcp server.
+  With --mcp-write the file also gets resolve_failure, a write tool that needs
+  a token with the write scope; an existing tool file is never overwritten. They call FailureTriage, so
   app/agents/{error_redactor,errors_query,failure_triage}.rb are copied when
   missing, even without --agent. Without maquina:mcp nothing MCP-related is
   written; running maquina:mcp later installs the same tools.
@@ -36,3 +41,5 @@ Examples:
     --password-env-var ADMIN_PASSWORD
 
   rails g maquina:solid_errors --prefix /admin --agent
+
+  rails g maquina:solid_errors --prefix /admin --mcp-write

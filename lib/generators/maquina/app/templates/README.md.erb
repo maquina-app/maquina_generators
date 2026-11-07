@@ -80,6 +80,19 @@ Edit credentials with:
 bin/rails credentials:edit
 ```
 
+<% if options[:auth] == "clave" -%>
+The admin dashboards (overview, errors, jobs, security) are behind the app's sign-in. List who may open them; anyone else gets a 404:
+
+```yaml
+backstage:
+  emails:
+    - you@example.com
+```
+<% if options[:mcp] -%>
+
+The same list decides who sees the admin-only MCP tools (errors, jobs, security).
+<% end -%>
+<% else -%>
 Add backstage credentials for the admin dashboards (overview, errors, jobs, security):
 
 ```yaml
@@ -87,6 +100,7 @@ backstage:
   username: your_user
   password: your_password
 ```
+<% end -%>
 
 ## Maquina Ecosystem
 

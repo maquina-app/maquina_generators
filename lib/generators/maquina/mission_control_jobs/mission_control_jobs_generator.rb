@@ -1,8 +1,11 @@
 require "rails/generators"
+require_relative "../backstage_signin/backstage_signin"
 
 module Maquina
   module Generators
     class MissionControlJobsGenerator < Rails::Generators::Base
+      include BackstageSignin
+
       source_root File.expand_path("templates", __dir__)
 
       class_option :prefix, type: :string, required: true,
@@ -81,6 +84,12 @@ module Maquina
         view_files.each { |f| copy_file f, f }
       end
 
+      # The backstage behind the app's Clave sign-in instead of Basic Auth,
+      # when Clave is installed (BackstageSignin).
+      def put_backstage_behind_signin
+        @backstage_signin = install_backstage_signin
+      end
+
       # 9. Bundle install
       def run_bundle_install
         return unless rails_app?
@@ -98,11 +107,16 @@ module Maquina
         say "Mission Control Jobs has been installed!", :green
         say ""
         say "Configuration:", :yellow
-        say "  - Set credentials: bin/rails credentials:edit"
-        say "    backstage:"
-        say "      username: your_user"
-        say "      password: your_password"
-        say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        if @backstage_signin
+          say_backstage_access
+        else
+          say "  - Set credentials: bin/rails credentials:edit"
+          say "    backstage:"
+          say "      username: your_user"
+          say "      password: your_password"
+          say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        end
+        say_backstage_signin_pending if @backstage_signin
         say ""
       end
 

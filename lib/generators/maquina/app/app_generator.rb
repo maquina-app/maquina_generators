@@ -363,8 +363,13 @@ module Maquina
         say "Next steps:", :yellow
         say "  1. Set credentials: bin/rails credentials:edit"
         say "     backstage:"
-        say "       username: your_user"
-        say "       password: your_password"
+        if options[:auth] == "clave"
+          say "       emails:"
+          say "         - you@example.com   # who may open #{options[:prefix]} (signed in with Clave)"
+        else
+          say "       username: your_user"
+          say "       password: your_password"
+        end
         say "  2. Start the app: bin/dev"
         say ""
         say "Installed components:", :yellow

@@ -43,6 +43,24 @@ module Maquina
         files.map { |owner, path| install_mcp_sibling_file(owner, path, write: write) }.any?
       end
 
+      # The write tools each sibling's --mcp-write adds.
+      WRITE_TOOLS = {
+        solid_errors: %w[resolve_failure],
+        solid_queue: %w[retry_failed_job discard_failed_job],
+        security: %w[unban_address],
+        csp_reports: []
+      }.freeze
+
+      # --mcp-write was asked for, but the sibling's tool file was already
+      # there without every write tool, so install_mcp_tools kept it as it was.
+      def mcp_write_pending?(sibling)
+        path = File.join(destination_root, "app/models/mcp/tools/#{sibling}.rb")
+        return false unless options[:mcp_write] && File.exist?(path)
+
+        content = File.read(path)
+        WRITE_TOOLS.fetch(sibling.to_sym).any? { |tool| !content.include?("def self.#{tool}") }
+      end
+
       # The read-only variant of every sibling whose marker is present. Returns
       # the siblings that got files.
       def backfill_sibling_mcp_tools

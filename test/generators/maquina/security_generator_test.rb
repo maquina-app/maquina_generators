@@ -414,6 +414,67 @@ class Maquina::Generators::SecurityGeneratorTest < Rails::Generators::TestCase
     assert_file "app/models/mcp/tools/security.rb", "# custom tools\n"
   end
 
+  test "the rack_attack rules can lift a ban" do
+    run_generator %w[--prefix /admin]
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_match(/def self\.unban!\(ip\)\n    Fail2Ban\.reset\("scanner:\#\{ip\}", findtime: SCANNER_FINDTIME\)\n    Allow2Ban\.reset\("flood:\#\{ip\}", findtime: GENERAL_PERIOD\)/, content)
+    end
+  end
+
+  test "adds unban_address as a write tool with --mcp-write" do
+    write_mcp_registry
+
+    output = run_generator %w[--prefix /admin --mcp-write]
+
+    assert_file "app/models/mcp/tools/security.rb" do |content|
+      assert_match(/WRITE_TOOLS = %w\[unban_address\]\.freeze/, content)
+      assert_match(/name: "unban_address"/, content)
+      assert_match(/def self\.unban_address\(scope:, ip:\)/, content)
+      assert_match(/::Rack::Attack\.unban!\(address\)/, content)
+      assert_match(/raise IPAddr::InvalidAddressError if ip\.include\?\("\/"\)/, content)
+    end
+    assert_match(/unban_address \(needs the write scope\)/, output)
+  end
+
+  test "both MCP tool variants are valid Ruby" do
+    write_mcp_registry
+
+    [%w[--prefix /admin], %w[--prefix /admin --mcp-write]].each do |args|
+      FileUtils.rm_f(File.join(destination_root, "app/models/mcp/tools/security.rb"))
+      run_generator args
+
+      assert RubyVM::InstructionSequence.compile(File.read(File.join(destination_root, "app/models/mcp/tools/security.rb")))
+    end
+  end
+
+  test "--mcp-write adds unban! to rules written before it existed" do
+    run_generator %w[--prefix /admin]
+    path = File.join(destination_root, "config/initializers/rack_attack.rb")
+    File.write(path, File.read(path).sub(/\n  # Lifts both bans.*?\n  end\n/m, "\n"))
+    assert_no_match(/unban!/, File.read(path))
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin --mcp-write]
+
+    assert_file "config/initializers/rack_attack.rb" do |content|
+      assert_equal 1, content.scan("def self.unban!(ip)").size
+      assert_match(/Allow2Ban\.banned\?\("flood:\#\{ip\}"\)\n  end\n\n  # Lifts both bans/, content)
+    end
+  end
+
+  test "--mcp-write says how to add unban! to rules it cannot find its place in" do
+    mkdir_p("config/initializers")
+    File.write(File.join(destination_root, "config/initializers/rack_attack.rb"), "class Rack::Attack\n  def self.banned?(ip) = false # custom\nend\n")
+    write_mcp_registry
+
+    output = run_generator %w[--prefix /admin --mcp-write]
+
+    assert_file "config/initializers/rack_attack.rb", /# custom/
+    assert_match(/does not define/, output)
+    assert_match(/def self\.unban!\(ip\)/, output)
+  end
+
   test "running twice with maquina:mcp changes nothing the second time" do
     write_mcp_registry
 

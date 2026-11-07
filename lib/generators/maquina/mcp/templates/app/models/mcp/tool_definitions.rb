@@ -17,10 +17,12 @@ module Mcp
       end
     end
 
-    # Admin-only modules read operational data, not the user's own: only an
-    # admin with MCP enabled sees them. For everyone else they do not exist.
+    # Admin-only modules read operational data across every account, not the
+    # user's own: only someone with backstage access (User#backstage_access?,
+    # the backstage.emails list) and MCP enabled sees them. An account's admin
+    # role is not enough. For everyone else they do not exist.
     def self.visible_modules(user)
-      modules.reject { |mod| mod::ADMIN_ONLY && !(user.admin? && Mcp.enabled_for?(user)) }
+      modules.reject { |mod| mod::ADMIN_ONLY && !(user.backstage_access? && Mcp.enabled_for?(user)) }
     end
 
     def self.for(user)

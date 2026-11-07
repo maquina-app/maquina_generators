@@ -13,15 +13,27 @@
 # With a feature flag (Mcp::FLAG), every test starts with the flag on; call
 # mcp_flag(false) to test it off. Both go through the ENV fallback in
 # Mcp.enabled_for?: if the app moves its flag elsewhere, change mcp_flag.
+#
+# The admin-only tools are for people on the backstage list
+# (User#backstage_access?). Every test starts with the mcp_admin fixture on it,
+# through config.x.backstage_emails, which User.backstage_emails reads first.
 module McpTestHelper
   MCP_PROTOCOL_VERSION_META = "io.modelcontextprotocol/protocolVersion"
   MCP_CLIENT_CAPABILITIES_META = "io.modelcontextprotocol/clientCapabilities"
   # Integration tests run on www.example.com, so tokens are issued for it.
   MCP_RESOURCE = "http://www.example.com/mcp"
+  MCP_BACKSTAGE_EMAILS = %w[mcp-admin@example.com].freeze
 
   def self.included(base)
-    base.setup { mcp_flag(true) }
-    base.teardown { restore_mcp_flag }
+    base.setup do
+      mcp_flag(true)
+      @backstage_emails_before = Rails.configuration.x.backstage_emails
+      Rails.configuration.x.backstage_emails = MCP_BACKSTAGE_EMAILS.dup
+    end
+    base.teardown do
+      restore_mcp_flag
+      Rails.configuration.x.backstage_emails = @backstage_emails_before
+    end
   end
 
   def mcp_post(payload, token: nil, headers: {})

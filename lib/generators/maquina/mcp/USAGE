@@ -17,7 +17,9 @@ Description:
   with a whoami tool, written only if missing. Tools reach the token's own
   user's data through Mcp::UserScope. If solid_errors, solid_queue, security
   or csp_reports are already installed, their admin-only MCP tools are added
-  too. Generates a test helper (mcp_post, oauth_token_for), an end-to-end
+  too. Admin-only tools are for users on the backstage list (backstage.emails
+  in credentials, User#backstage_access?, added to app/models/user.rb); an
+  account's admin role is not enough. Generates a test helper (mcp_post, oauth_token_for), an end-to-end
   flow test, a protocol conformance test and a registry test. Anything it
   cannot place safely is listed after the install.
 
