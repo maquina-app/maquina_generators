@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.10.0] - 2026-11-07
 
 ### Added
 
@@ -23,7 +23,7 @@ All notable changes to this project will be documented in this file.
 - `maquina:mcp` generator: a standalone MCP server at `POST /mcp` (protocol `2026-07-28`, plain HTTP, no SSE or sessions), signed in through `maquina:oauth`, which it requires. It adds no gem.
   - `McpController` and `McpAuthenticatable` check the bearer token and its `resource`, enforce the `Mcp-Method`/`Mcp-Name` headers and the protocol version, and rate-limit to 120 requests per minute per token.
   - A hand-written CORS middleware in `config/initializers/mcp_cors.rb`.
-  - A tool registry in `app/models/mcp/` that checks arguments against each tool's schema, refuses write tools to a `read` token with 403 `insufficient_scope`, and hides admin-only tools from members.
+  - A tool registry in `app/models/mcp/` that checks arguments against each tool's schema, refuses write tools to a `read` token with 403 `insufficient_scope`, and shows admin-only tools only to people on the backstage list (`User#backstage_access?`, `backstage.emails` in credentials), which `maquina:mcp` adds to the user model. An account's `admin` role is not enough: registration makes everyone who signs up the admin of their own account, and these tools read every account's data.
   - A `whoami` tool, a test helper, an end-to-end flow test and a conformance test.
   - The post-install message prints the Connected apps path and the `npx @modelcontextprotocol/inspector` check against `http://localhost:3000/mcp`.
 - `maquina:mcp_tool NAME [arg:type ...] [--write]` generator: adds a tool's schema, a method stub and a test to `app/models/mcp/tools/app.rb`. Types are `string`, `integer`, `number`, `boolean` and `enum[a,b]`; a `?` suffix makes an argument optional.
@@ -48,19 +48,27 @@ All notable changes to this project will be documented in this file.
   - `maquina:security`: `unban_address`, which refuses anything but one IP address.
 - `Rack::Attack.unban!(ip)` in the `maquina:rack_attack` rules: lifts the scanner and flood bans and clears their strike counts. `maquina:security --mcp-write` adds it to an initializer written before it existed.
 - The generated MCP tool tests call each tool as an operator with real errors, failed jobs and refusals, not only check who can see it.
+- `maquina:rack_attack` installs a **route guard**: a scanner rule stands down when the app itself routes the path, so a broad pattern cannot break a real route. The route table is read once, on the first request, and cached.
+  - A path with a format Rails knows counts as the route without it: `/service-worker.js` is the app's `/service-worker(.:format)`, so visitors are not banned for loading it. `/login.php` is still not `/login`.
+  - A root catch-all (`/*path`), even one constrained to JSON, is left out of the comparison, so the app's other routes stay protected.
+  - A dynamic segment at the root (`/:slug`) does not count as "the app routes this": it matches every single-segment path, and `/.env` would look like the app's own page.
+  - The `/graphql` pattern is only refused when the app does not serve GraphQL.
 
 ### Changed
 
-- **Security:** the admin-only MCP tools (errors, jobs, security, CSP reports) are for people on the backstage list (`User#backstage_access?`), not for every user with the `admin` role. Registration makes everyone who signs up the admin of their own account, so on an app with open sign-up any stranger could read every account's errors, job arguments and visitor addresses. `maquina:mcp` adds `backstage_access?` to the user model, and its test helper puts the `mcp_admin` fixture on the list.
 - `maquina:solid_errors` copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` when MCP is installed, even without `--agent`, because its MCP tools use them. `--agent`, `bin/failures` and `bin/failures-mcp` are unchanged.
 - `maquina:solid_queue` copies `ErrorRedactor` into `app/agents/` when MCP is installed, to redact job arguments.
 - The admin navigation's tab strip scrolls sideways on a phone, and "Back to app" shrinks to its icon there.
 - Security uses a shield icon in the admin navigation, the overview and the app home page. maquina-components ships no shield, so the SVG is inline.
+- `maquina:rack_attack` and `maquina:security` install a much wider scanner-path list, and a route guard that keeps it from breaking the host app.
+  - The list names what a modern scanner reaches for first, not just the classic targets: cloud provider credentials (`service-account.json`, `firebase-adminsdk.json`), container runtime internals (`/var/run/secrets/...`, `/proc/self/environ`), infrastructure as code (`docker-compose.yml`, `terraform.tfstate`), bare secret files (`secrets.json`, `credentials.json`), dev-server artefacts (`__vite_rsc_findSourceMapURL`, `/@fs/...`), source maps, dotfile credentials and encoded path traversal.
+  - Measured against 30,703 refused requests collected from five production apps, the list names 5.2% of the observed attack traffic before and 58.7% after.
+  - The path is unhidden before it is matched, so `/api/orders/..%2Fadmin/config.json` is caught like `/api/orders/../admin/config.json`.
+  - A public key is not a private key: `/public_key.pem` and `/pubkey.pem` are still served.
 
 ### Removed
 
 - `maquina:solid_errors --mcp_http` and the `FailuresMcpController` it generated at `<prefix>/failures/mcp` behind backstage Basic Auth. The OAuth-backed server is now the only internet-facing MCP surface. Apps generated with it keep their files, which go on working until you delete them. Use `maquina:mcp` instead: with it installed, `maquina:solid_errors` gives admins the same failure tools.
-- `Rack::Attack.route_guard?`. The guard is always on, so there is nothing left for it to answer.
 
 ### Fixed
 
@@ -68,31 +76,12 @@ All notable changes to this project will be documented in this file.
   - Names now match as whole path segments: `/status`, `/status/x` and `/status.json` are scanner paths, and `/status-page` isn't.
   - An app with tenants at the root should also reserve these names, or an account called exactly `status` is still refused.
   - Existing apps keep their copy of `rack_attack.rb`, so they need this change applied by hand.
-- `maquina:rack_attack`'s route guard:
-  - It compared paths without their format, so a request for `/service-worker.js` did not count as the route `/service-worker(.:format)`. The scanner rule refused it and banned visitors within a few page loads. A format Rails knows now counts; `/login.php` is still not `/login`.
-  - It turned itself off for the whole app on any root catch-all, including one constrained to JSON, leaving every real route unprotected. A root catch-all is now left out of the comparison, and the app's other routes stay protected.
-- The Solid Errors MCP tools and `bin/failures` work. `ErrorsQuery` read `occurrences_count` and `recent_occurrence`, which Solid Errors' models do not have (its dashboard selects them as SQL aliases): `top_exceptions` raised on every call, and `list_failures` and `get_failure` raised once any error was stored. Occurrence counts and last-seen times are now counted with grouped queries, and `list_failures` orders by the most recent occurrence.
+- `bin/failures` and `bin/failures-mcp` (`--agent`) work, and so do the new Solid Errors MCP tools. `ErrorsQuery` read `occurrences_count` and `recent_occurrence`, which Solid Errors' models do not have (its dashboard selects them as SQL aliases): `top_exceptions` raised on every call, and `list_failures` and `get_failure` raised once any error was stored. Occurrence counts and last-seen times are now counted with grouped queries, and `list_failures` orders by the most recent occurrence.
 - The Solid Errors detail page no longer raises on an error with more than 10 occurrences. A "Clean Old Occurrences" button called a route that never existed, so the button is gone.
 - The Mission Control job filters submit. They called `form#debouncedSubmit`, which Mission Control doesn't define; they now call `form#submit` when a field changes.
 - Long job arguments and error text wrap, so a long failure no longer pushes Retry and Discard off the page: `overflow-wrap-anywhere` isn't a Tailwind class (`wrap-anywhere`, Tailwind 4.1+, is), the job table's cells needed `whitespace-normal` to override the table's `whitespace-nowrap`, and `block` was turning `line-clamp-2` off.
 - The Solid Errors detail page's header buttons wrap instead of running off the card on a phone.
-
-## [0.10.0] - 2026-10-21
-
-### Changed
-
-- `maquina:rack_attack` and `maquina:security` install a much wider scanner-path list, and a route guard that keeps it from breaking the host app.
-  - The list names what a modern scanner reaches for first, not just the classic targets: cloud provider credentials (`service-account.json`, `firebase-adminsdk.json`), container runtime internals (`/var/run/secrets/...`, `/proc/self/environ`), infrastructure as code (`docker-compose.yml`, `terraform.tfstate`), bare secret files (`secrets.json`, `credentials.json`), dev-server artefacts (`__vite_rsc_findSourceMapURL`, `/@fs/...`), source maps, dotfile credentials and encoded path traversal.
-  - Measured against 30,703 refused requests collected from five production apps, the list names 5.2% of the observed attack traffic before and 58.7% after.
-  - The path is unhidden before it is matched, so `/api/orders/..%2Fadmin/config.json` is caught like `/api/orders/../admin/config.json`.
-  - A public key is not a private key: `/public_key.pem` and `/pubkey.pem` are still served.
-
-### Added
-
-- `maquina:rack_attack` installs a **route guard**: a scanner rule stands down when the app itself routes the path, so a broad pattern cannot break a real route. The route table is read once, on the first request, and cached.
-  - The guard stands down entirely when the app has a root catch-all route (`/*path`), because then every path "matches" the app and the guard would disable itself.
-  - A dynamic segment at the root (`/:slug`) does not count as "the app routes this": it matches every single-segment path, and `/.env` would look like the app's own page.
-  - The `/graphql` pattern is only refused when the app does not serve GraphQL.
+- The gem no longer ships the scratch files its own generator tests write to `test/tmp`.
 
 ## [0.9.0] - 2026-10-19
 
