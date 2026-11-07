@@ -147,7 +147,7 @@ class Maquina::Generators::McpGeneratorTest < Rails::Generators::TestCase
     assert_file "app/models/mcp/tool_definitions.rb" do |content|
       assert_match(%r{Dir\[Rails\.root\.join\(TOOLS_GLOB\)\]\.sort}, content)
       assert_match(/"Mcp::Tools::#\{File\.basename\(path, "\.rb"\)\.camelize\}"\.constantize/, content)
-      assert_match(/mod::ADMIN_ONLY && !\(user\.admin\? && Mcp\.enabled_for\?\(user\)\)/, content)
+      assert_match(/mod::ADMIN_ONLY && !\(user\.backstage_access\? && Mcp\.enabled_for\?\(user\)\)/, content)
     end
     assert_file "app/models/mcp/tool_error.rb", /def self\.not_found/
     assert_file "app/models/mcp/user_scope.rb" do |content|

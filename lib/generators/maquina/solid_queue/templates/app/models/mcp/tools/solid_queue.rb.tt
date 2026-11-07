@@ -3,17 +3,18 @@
 # Admin only: a member's token neither sees nor reaches these tools. Job
 # arguments pass through ErrorRedactor (app/agents) before they leave.
 <% if write -%>
-# retry_failed_job is a write tool: it needs a token with the `write` scope.
+# retry_failed_job and discard_failed_job are write tools: they need a token
+# with the `write` scope.
 <% else -%>
 # Read-only. `rails g maquina:solid_queue --mcp-write` generates this file with
-# a write tool that retries a failed job (delete this file first).
+# write tools that retry or discard a failed job (delete this file first).
 <% end -%>
 module Mcp
   module Tools
     module SolidQueue
       ADMIN_ONLY = true
 <% if write -%>
-      WRITE_TOOLS = %w[retry_failed_job].freeze
+      WRITE_TOOLS = %w[retry_failed_job discard_failed_job].freeze
 <% else -%>
       WRITE_TOOLS = %w[].freeze
 <% end -%>
@@ -74,6 +75,18 @@ module Mcp
             required: ["id"], additionalProperties: false
           },
           annotations: {readOnlyHint: false}
+        },
+        {
+          name: "discard_failed_job",
+          description: "Discard one failed job by job id: the job and its failure are deleted and it never " \
+            "runs. This cannot be undone. Prefer retry_failed_job unless the job should never run, for " \
+            "example a duplicate or one whose record is gone. Get the id from list_failed_jobs.",
+          inputSchema: {
+            "$schema": SCHEMA, type: "object",
+            properties: {id: {type: "integer", description: "Job id from list_failed_jobs."}},
+            required: ["id"], additionalProperties: false
+          },
+          annotations: {readOnlyHint: false, destructiveHint: true}
 <% end -%>
         }
       ].freeze
@@ -120,6 +133,15 @@ module Mcp
         Rails.logger.info("[MCP] retry_failed_job job_id=#{id} user_id=#{scope.user.id}")
 
         {id: id, job_class: execution.job.class_name, queue: execution.job.queue_name, retried: true}
+      end
+
+      def self.discard_failed_job(scope:, id:)
+        execution = ::SolidQueue::FailedExecution.includes(:job).find_by!(job_id: id)
+        job = execution.job
+        execution.discard
+        Rails.logger.info("[MCP] discard_failed_job job_id=#{id} user_id=#{scope.user.id}")
+
+        {id: id, job_class: job.class_name, queue: job.queue_name, discarded: true}
       end
 <% end -%>
 

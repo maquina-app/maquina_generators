@@ -142,16 +142,18 @@ class Maquina::Generators::SolidQueueGeneratorTest < Rails::Generators::TestCase
     assert_match(%r{app/models/mcp/tools/solid_queue\.rb}, output)
   end
 
-  test "adds retry_failed_job as a write tool with --mcp-write" do
+  test "adds retry_failed_job and discard_failed_job as write tools with --mcp-write" do
     write_mcp_registry
 
     run_generator %w[--mcp-write]
 
     assert_file "app/models/mcp/tools/solid_queue.rb" do |content|
-      assert_match(/WRITE_TOOLS = %w\[retry_failed_job\]\.freeze/, content)
+      assert_match(/WRITE_TOOLS = %w\[retry_failed_job discard_failed_job\]\.freeze/, content)
       assert_match(/name: "retry_failed_job"/, content)
-      assert_match(/readOnlyHint: false/, content)
+      assert_match(/name: "discard_failed_job"/, content)
+      assert_match(/readOnlyHint: false, destructiveHint: true/, content)
       assert_match(/def self\.retry_failed_job\(scope:, id:\)/, content)
+      assert_match(/def self\.discard_failed_job\(scope:, id:\)\n.*execution\.discard/m, content)
     end
   end
 
@@ -168,16 +170,16 @@ class Maquina::Generators::SolidQueueGeneratorTest < Rails::Generators::TestCase
     end
   end
 
-  test "keeps an existing MCP tool file and says how to add the write tool" do
+  test "keeps an existing MCP tool file and says how to add the write tools" do
     write_mcp_registry
     run_generator
 
     output = run_generator %w[--mcp-write]
 
     assert_file "app/models/mcp/tools/solid_queue.rb" do |content|
-      assert_no_match(/retry_failed_job/, content)
+      assert_no_match(/retry_failed_job|discard_failed_job/, content)
     end
-    assert_match(/already exists without retry_failed_job/, output)
+    assert_match(/already exists without the write tools/, output)
   end
 
   test "running twice with maquina:mcp changes nothing the second time" do

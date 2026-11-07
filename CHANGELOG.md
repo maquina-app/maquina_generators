@@ -36,9 +36,22 @@ All notable changes to this project will be documented in this file.
 - `--mcp` and `--mcp-flag NAME` options for `maquina:app`. They run `maquina:oauth` and `maquina:mcp` after `maquina:security` and `maquina:passkeys`, so the Rack::Attack rules and the admin tools land.
   - `--mcp` needs `--auth clave` and stops before changing anything without it.
   - The README and post-install message point to `/settings/connected_apps` and the MCP Inspector.
+- The backstage behind the app's Clave sign-in. When Clave is installed, `maquina:solid_errors`, `maquina:mission_control_jobs` and `maquina:security` replace the shared Basic Auth login.
+  - `BackstageController` includes `Authentication`. Signed out, a page redirects to the sign-in, with a 303 for PATCH/PUT/DELETE so the engines' Resolve and Discard are not re-sent. Signed in but not listed, it is a 404.
+  - `User.backstage_emails` and `User#backstage_access?`: an unblocked user whose email is listed under `backstage.emails` in credentials.
+  - The Basic Auth comes out of the overview, the Security page and both engines' initializers. A generator run later keeps the sign-in, and a file changed by hand keeps its Basic Auth and is named in the post-install message.
+  - A generated `test/integration/backstage_access_test.rb` with `backstage_operator` and `backstage_member` fixtures.
+  - Apps without Clave, including `maquina:registration` apps, keep Basic Auth.
+- MCP write tools, behind `--mcp-write` and the `write` scope, each logged with the user's id:
+  - `maquina:solid_errors`: `resolve_failure`.
+  - `maquina:solid_queue`: `discard_failed_job`, next to `retry_failed_job`.
+  - `maquina:security`: `unban_address`, which refuses anything but one IP address.
+- `Rack::Attack.unban!(ip)` in the `maquina:rack_attack` rules: lifts the scanner and flood bans and clears their strike counts. `maquina:security --mcp-write` adds it to an initializer written before it existed.
+- The generated MCP tool tests call each tool as an operator with real errors, failed jobs and refusals, not only check who can see it.
 
 ### Changed
 
+- **Security:** the admin-only MCP tools (errors, jobs, security, CSP reports) are for people on the backstage list (`User#backstage_access?`), not for every user with the `admin` role. Registration makes everyone who signs up the admin of their own account, so on an app with open sign-up any stranger could read every account's errors, job arguments and visitor addresses. `maquina:mcp` adds `backstage_access?` to the user model, and its test helper puts the `mcp_admin` fixture on the list.
 - `maquina:solid_errors` copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` when MCP is installed, even without `--agent`, because its MCP tools use them. `--agent`, `bin/failures` and `bin/failures-mcp` are unchanged.
 - `maquina:solid_queue` copies `ErrorRedactor` into `app/agents/` when MCP is installed, to redact job arguments.
 - The admin navigation's tab strip scrolls sideways on a phone, and "Back to app" shrinks to its icon there.
@@ -58,6 +71,7 @@ All notable changes to this project will be documented in this file.
 - `maquina:rack_attack`'s route guard:
   - It compared paths without their format, so a request for `/service-worker.js` did not count as the route `/service-worker(.:format)`. The scanner rule refused it and banned visitors within a few page loads. A format Rails knows now counts; `/login.php` is still not `/login`.
   - It turned itself off for the whole app on any root catch-all, including one constrained to JSON, leaving every real route unprotected. A root catch-all is now left out of the comparison, and the app's other routes stay protected.
+- The Solid Errors MCP tools and `bin/failures` work. `ErrorsQuery` read `occurrences_count` and `recent_occurrence`, which Solid Errors' models do not have (its dashboard selects them as SQL aliases): `top_exceptions` raised on every call, and `list_failures` and `get_failure` raised once any error was stored. Occurrence counts and last-seen times are now counted with grouped queries, and `list_failures` orders by the most recent occurrence.
 - The Solid Errors detail page no longer raises on an error with more than 10 occurrences. A "Clean Old Occurrences" button called a route that never existed, so the button is gone.
 - The Mission Control job filters submit. They called `form#debouncedSubmit`, which Mission Control doesn't define; they now call `form#submit` when a field changes.
 - Long job arguments and error text wrap, so a long failure no longer pushes Retry and Discard off the page: `overflow-wrap-anywhere` isn't a Tailwind class (`wrap-anywhere`, Tailwind 4.1+, is), the job table's cells needed `whitespace-normal` to override the table's `whitespace-nowrap`, and `block` was turning `line-clamp-2` off.

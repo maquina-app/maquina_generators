@@ -421,6 +421,13 @@ class Rack::Attack
   def self.banned?(ip)
     Fail2Ban.banned?("scanner:#{ip}") || Allow2Ban.banned?("flood:#{ip}")
   end
+
+  # Lifts both bans and clears their strike counts, for an address banned by
+  # mistake. The refusals already recorded stay in the security database.
+  def self.unban!(ip)
+    Fail2Ban.reset("scanner:#{ip}", findtime: SCANNER_FINDTIME)
+    Allow2Ban.reset("flood:#{ip}", findtime: GENERAL_PERIOD)
+  end
 end
 
 Rack::Attack.blocklist("fail2ban/scanners") do |req|

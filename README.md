@@ -206,16 +206,18 @@ Choose the Streamable HTTP transport, enter `http://localhost:3000/mcp` and conn
 
 #### Operational tools from other generators
 
-When `app/models/mcp/tools.rb` exists, these generators also write an MCP tool module. Every one is `ADMIN_ONLY`: only users with the `admin` role see or call them, and a member's token gets "unknown tool". Lists are capped at 50 rows and times are ISO 8601 UTC.
+When `app/models/mcp/tools.rb` exists, these generators also write an MCP tool module. Every one is `ADMIN_ONLY`: they read data across every account, so only people on the backstage list (`User#backstage_access?`, see [Backstage access](#backstage-access----clave-sign-in-or-basic-auth)) see or call them. An account's `admin` role is not enough, since registration makes everyone who signs up the admin of their own account. Anyone else's token gets "unknown tool". Lists are capped at 50 rows and times are ISO 8601 UTC.
+
+The tools are read-only unless the generator runs with `--mcp-write`, which adds write tools that need a token with the `write` scope and log each call with the user's id.
 
 | Generator | Tool file | Tools |
 |-----------|-----------|-------|
-| `maquina:solid_errors` | `tools/solid_errors.rb` | `list_failures`, `get_failure`, `top_exceptions` (copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` if missing) |
-| `maquina:solid_queue` | `tools/solid_queue.rb` | `queue_status`, `list_failed_jobs`, `get_failed_job` (arguments redacted); `retry_failed_job` with `--mcp-write` |
-| `maquina:security` | `tools/security.rb` | `recent_blocks`, `security_summary` |
+| `maquina:solid_errors` | `tools/solid_errors.rb` | `list_failures`, `get_failure`, `top_exceptions` (copies `ErrorsQuery`, `FailureTriage` and `ErrorRedactor` into `app/agents/` if missing); `resolve_failure` with `--mcp-write` |
+| `maquina:solid_queue` | `tools/solid_queue.rb` | `queue_status`, `list_failed_jobs`, `get_failed_job` (arguments redacted); `retry_failed_job` and `discard_failed_job` with `--mcp-write` |
+| `maquina:security` | `tools/security.rb` | `recent_blocks`, `security_summary`; `unban_address` with `--mcp-write` (adds `Rack::Attack.unban!` to an initializer written before it existed) |
 | `maquina:csp_reports` | `tools/csp_reports.rb` | `list_csp_reports`, `csp_report_summary` |
 
-The install order does not matter. A sibling run after `maquina:mcp` writes its own tool file. `maquina:mcp` run after the siblings backfills a tool file for each one it finds (`config/initializers/solid_errors.rb`, `config/solid_queue.yml` or `config/queue.yml`, `app/models/security/abuse_event.rb`, `csp_violations` in `db/security_schema.rb`), using the read-only Solid Queue variant. Existing tool files are never overwritten, and without MCP the siblings write and print nothing about it.
+The install order does not matter. A sibling run after `maquina:mcp` writes its own tool file. `maquina:mcp` run after the siblings backfills a tool file for each one it finds (`config/initializers/solid_errors.rb`, `config/solid_queue.yml` or `config/queue.yml`, `app/models/security/abuse_event.rb`, `csp_violations` in `db/security_schema.rb`), using the read-only variants. Existing tool files are never overwritten (to add the write tools later, delete the file and run the generator again with `--mcp-write`), and without MCP the siblings write and print nothing about it.
 
 ### MCP Tool -- Add a Tool to the MCP Server
 
@@ -295,6 +297,30 @@ All generated code lives in your app -- edit it directly:
 
 ---
 
+### Backstage Access -- Clave Sign-In or Basic Auth
+
+Solid Errors, Mission Control Jobs and Security share one `BackstageController` and one way in.
+
+**With Clave installed** (`app/models/email_verification.rb` is there), each of them puts the backstage behind the app's own sign-in:
+
+- `BackstageController` includes `Authentication` and raises `ActiveRecord::RecordNotFound` unless `Current.user.backstage_access?`. Signed out, a page redirects to the sign-in (303 for PATCH/PUT/DELETE, so the engines' Resolve and Discard buttons are not re-sent); signed in but not listed, it is a 404, so the pages never confirm they exist.
+- `User.backstage_emails` and `User#backstage_access?` are added to `app/models/user.rb`. Access is an unblocked user whose email is on the list in credentials:
+
+  ```yaml
+  backstage:
+    emails:
+      - you@example.com
+  ```
+
+  An empty list is nobody. The same predicate gates the admin-only MCP tools.
+- The Basic Auth comes out of the overview, the Security page and both engines' initializers (Mission Control gets `http_basic_auth_enabled = false`). Do not set `backstage.username` or `password`: Solid Errors turns its Basic Auth back on when a password is set.
+- `test/integration/backstage_access_test.rb` checks signed out, not listed, blocked, an empty list and a listed user, with `backstage_operator` and `backstage_member` fixtures.
+- A generator run later keeps the backstage on the sign-in. A file you changed by hand keeps its Basic Auth, and the post-install message names it.
+
+**Without Clave** (no auth, or `maquina:registration`), the backstage uses HTTP Basic Auth with `backstage.username` / `password` from credentials, or each generator's ENV variables, and answers 503 until they are set.
+
+---
+
 ### Solid Errors -- Error Tracking Dashboard
 
 **Solid Errors** installs the [solid_errors](https://github.com/fractaledmind/solid_errors) gem with HTTP authentication and engine mounting.
@@ -302,11 +328,11 @@ All generated code lives in your app -- edit it directly:
 #### What it generates
 
 - **BackstageController:** Inherits from `ActionController::Base` (bypasses app's ApplicationController concerns)
-- **Initializer:** Credentials-first auth with ENV variable fallback, database connection config
+- **Initializer:** Database connection config, and Basic Auth from credentials or ENV when the app has no Clave (see [Backstage access](#backstage-access----clave-sign-in-or-basic-auth))
 - **Route:** Mounts `SolidErrors::Engine` at `<prefix>/errors`
 - **Mailer templates:** Self-contained `error_occurred` HTML and text templates, so `send_emails` works without the dashboard's helpers
 - **Admin navigation:** Shared navigation bar with Overview, Errors, Jobs and Security tabs
-- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; answers 503 until backstage credentials are set
+- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; behind the backstage sign-in, or with Basic Auth answers 503 until backstage credentials are set
 - **Custom layout:** Tailwind-styled layout with admin navigation and toast flash messages
 - **Stimulus controllers:** `clipboard_controller.js` and `backtrace_filter_controller.js`
 - **Custom views:** Tailwind-styled views to override the gem defaults (included by default, use `--no-copy-views` to skip)
@@ -325,20 +351,21 @@ The generator automatically runs `bundle install`. After running, execute `bin/r
 ```bash
 rails g maquina:solid_errors --prefix /admin                          # Default (with custom views)
 rails g maquina:solid_errors --prefix /admin --no-copy-views          # Without custom views
+rails g maquina:solid_errors --prefix /admin --mcp-write              # Also generate the resolve_failure MCP tool
 rails g maquina:solid_errors --prefix /backstage \
   --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD         # Custom env vars
 ```
 
 #### Authentication
 
-Credentials are resolved in order:
+With Clave, the app's sign-in and the backstage list; see [Backstage access](#backstage-access----clave-sign-in-or-basic-auth). Without it, Basic Auth credentials are resolved in order:
 
 1. `Rails.application.credentials.backstage.username` / `.password`
 2. `ENV["SOLID_ERRORS_USER"]` / `ENV["SOLID_ERRORS_PASSWORD"]` (configurable)
 
 #### MCP
 
-With `maquina:mcp` installed, it also writes admin-only MCP tools (`list_failures`, `get_failure`, `top_exceptions`) to `app/models/mcp/tools/solid_errors.rb`. See [Operational tools from other generators](#operational-tools-from-other-generators). The old `--mcp-http` endpoint is gone; `--agent` still generates `bin/failures` and the stdio `bin/failures-mcp`.
+With `maquina:mcp` installed, it also writes admin-only MCP tools (`list_failures`, `get_failure`, `top_exceptions`) to `app/models/mcp/tools/solid_errors.rb`. `--mcp-write` adds `resolve_failure`, which needs the `write` scope. See [Operational tools from other generators](#operational-tools-from-other-generators). The old `--mcp-http` endpoint is gone; `--agent` still generates `bin/failures` and the stdio `bin/failures-mcp`.
 
 ---
 
@@ -353,7 +380,7 @@ With `maquina:mcp` installed, it also writes admin-only MCP tools (`list_failure
 - **Initializer:** Sets base controller class, credentials-first auth with ENV variable fallback
 - **Route:** Mounts `MissionControl::Jobs::Engine` at `<prefix>/jobs`
 - **Admin navigation:** Shared navigation bar with Overview, Errors, Jobs and Security tabs
-- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; answers 503 until backstage credentials are set
+- **Admin overview:** `BackstageDashboardController` at the prefix root with cards for each installed dashboard and a `@metrics` slot for your own aggregate counts; behind the backstage sign-in, or with Basic Auth answers 503 until backstage credentials are set
 - **Custom layout:** Tailwind-styled layout with admin navigation, toast flash messages, application/server selection, and tab navigation
 - **Custom views:** Tailwind-styled views for jobs, queues, workers, and recurring tasks (included by default, use `--no-copy-views` to skip)
 
@@ -377,7 +404,7 @@ rails g maquina:mission_control_jobs --prefix /backstage \
 
 #### Authentication
 
-Credentials are resolved in order:
+With Clave, the app's sign-in and the backstage list; see [Backstage access](#backstage-access----clave-sign-in-or-basic-auth). Without it, Basic Auth credentials are resolved in order:
 
 1. `Rails.application.credentials.backstage.username` / `.password`
 2. `ENV["MISSION_CONTROL_JOBS_USER"]` / `ENV["MISSION_CONTROL_JOBS_PASSWORD"]` (configurable)
@@ -408,10 +435,10 @@ The generator automatically runs `bundle install` and installs migrations.
 ```bash
 rails g maquina:solid_queue                      # Default (sqlite3)
 rails g maquina:solid_queue --database postgresql # PostgreSQL
-rails g maquina:solid_queue --mcp-write           # Also generate the retry_failed_job MCP tool
+rails g maquina:solid_queue --mcp-write           # Also generate the retry_failed_job and discard_failed_job MCP tools
 ```
 
-With `maquina:mcp` installed, it also writes admin-only MCP tools (`queue_status`, `list_failed_jobs`, `get_failed_job`) to `app/models/mcp/tools/solid_queue.rb`. `--mcp-write` adds `retry_failed_job`, which needs the `write` scope.
+With `maquina:mcp` installed, it also writes admin-only MCP tools (`queue_status`, `list_failed_jobs`, `get_failed_job`) to `app/models/mcp/tools/solid_queue.rb`. `--mcp-write` adds `retry_failed_job` and `discard_failed_job`, which need the `write` scope.
 
 ---
 
@@ -491,18 +518,23 @@ The generator automatically runs `bundle install`. The page needs maquina_compon
 rails g maquina:security --prefix /admin                      # Default
 rails g maquina:security --prefix /admin --login-path /sign_in  # Different sign-in path
 rails g maquina:security --prefix /admin --no-copy-views      # Without views
+rails g maquina:security --prefix /admin --mcp-write          # Also generate the unban_address MCP tool
 rails g maquina:security --prefix /backstage \
   --user-env-var ADMIN_USER --password-env-var ADMIN_PASSWORD  # Custom env vars
 ```
 
 #### Authentication
 
-HTTP Basic Auth, with credentials resolved in order:
+With Clave, the app's sign-in and the backstage list; see [Backstage access](#backstage-access----clave-sign-in-or-basic-auth). Without it, HTTP Basic Auth, with credentials resolved in order:
 
 1. `Rails.application.credentials.backstage.username` / `.password`
 2. `ENV["SECURITY_USER"]` / `ENV["SECURITY_PASSWORD"]` (configurable)
 
-The page answers 503 until one of them is set, so it is never left open.
+With Basic Auth the page answers 503 until one of them is set, so it is never left open.
+
+#### MCP
+
+With `maquina:mcp` installed, it also writes admin-only MCP tools (`recent_blocks`, `security_summary`). `--mcp-write` adds `unban_address`, which lifts the scanner and flood bans on one address through `Rack::Attack.unban!` and needs the `write` scope.
 
 #### Trying it locally
 
@@ -597,7 +629,7 @@ rails g maquina:app --auth clave --mcp --mcp-flag beta_mcp
 #### After running
 
 ```bash
-bin/rails credentials:edit                # set backstage username/password
+bin/rails credentials:edit                # --auth clave: backstage.emails; otherwise backstage username/password
 bin/dev
 ```
 

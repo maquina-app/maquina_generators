@@ -6,11 +6,11 @@ Description:
   to use Solid Queue, and updates Procfile.dev.
 
   When maquina:mcp is installed (app/models/mcp/tools.rb exists), it also
-  writes app/models/mcp/tools/solid_queue.rb, MCP tools visible only to admin
-  users: queue_status, list_failed_jobs and get_failed_job (arguments
+  writes app/models/mcp/tools/solid_queue.rb, MCP tools visible only to users
+  on the backstage list (User#backstage_access?): queue_status, list_failed_jobs and get_failed_job (arguments
   redacted by app/agents/error_redactor.rb, copied when missing). They are
-  read-only. With --mcp-write the file also gets retry_failed_job, a write
-  tool that needs a token with the write scope. An existing tool file is
+  read-only. With --mcp-write the file also gets retry_failed_job and
+  discard_failed_job, write tools that need a token with the write scope. An existing tool file is
   never overwritten. Without maquina:mcp nothing MCP-related is written;
   running maquina:mcp later installs the read-only tools.
 

@@ -9,7 +9,17 @@ Description:
   navigation tab. The page is behind the backstage Basic Auth and answers
   503 until credentials are set.
 
+  With Clave installed, the backstage is behind the app's sign-in instead:
+  users listed under backstage.emails in credentials get in, anyone else
+  gets a 404, and the Basic Auth is taken out of the files it wrote.
+
+  When maquina:mcp is installed, it also writes app/models/mcp/tools/security.rb:
+  recent_blocks and security_summary, for users on the backstage list. With
+  --mcp-write it adds unban_address, a write tool that lifts the bans on one
+  address through Rack::Attack.unban! (added to an initializer without it).
+
 Examples:
   rails g maquina:security --prefix /admin
   rails g maquina:security --prefix /admin --login-path /sign_in
   rails g maquina:security --prefix /admin --no-copy-views
+  rails g maquina:security --prefix /admin --mcp-write

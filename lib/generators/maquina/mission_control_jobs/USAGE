@@ -5,6 +5,9 @@ Description:
 
   Authentication tries Rails credentials (backstage.username/password)
   first, then falls back to environment variables.
+  With Clave installed, the backstage is behind the app's sign-in instead:
+  users listed under backstage.emails in credentials get in, anyone else
+  gets a 404, and the Basic Auth is taken out of the files it wrote.
 
 Examples:
   rails g maquina:mission_control_jobs --prefix /admin

@@ -1,10 +1,12 @@
 require "rails/generators"
+require_relative "../backstage_signin/backstage_signin"
 require_relative "../mcp/mcp_sibling_tools"
 
 module Maquina
   module Generators
     class SolidErrorsGenerator < Rails::Generators::Base
       include McpSiblingTools
+      include BackstageSignin
 
       source_root File.expand_path("templates", __dir__)
 
@@ -18,6 +20,8 @@ module Maquina
         desc: "Copy custom Solid Errors views to the host app"
       class_option :agent, type: :boolean, default: false,
         desc: "Generate read-only AI-agent triage tooling (bin/failures + stdio MCP server)"
+      class_option :mcp_write, type: :boolean, default: false,
+        desc: "Add the resolve_failure MCP write tool to the errors tools (needs maquina:mcp)"
       class_option :quiet, type: :boolean, default: false,
         desc: "Suppress post-install instructions"
 
@@ -150,11 +154,18 @@ module Maquina
         chmod "bin/failures-mcp", 0o755
       end
 
-      # 12. MCP tools (admin only, read-only), when maquina:mcp is installed.
-      #     They call FailureTriage, so the three app/agents query files come
-      #     along even without --agent.
+      # 12. MCP tools (admin only), when maquina:mcp is installed. Read-only
+      #     unless --mcp-write adds resolve_failure. They call FailureTriage,
+      #     so the three app/agents query files come along even without --agent.
       def create_mcp_tools
-        @mcp_tools_installed = install_mcp_tools(:solid_errors)
+        @mcp_tools_installed = install_mcp_tools(:solid_errors, write: options[:mcp_write])
+        @mcp_write_pending = mcp_write_pending?(:solid_errors)
+      end
+
+      # The backstage behind the app's Clave sign-in instead of Basic Auth,
+      # when Clave is installed (BackstageSignin).
+      def put_backstage_behind_signin
+        @backstage_signin = install_backstage_signin
       end
 
       # 13. Bundle install
@@ -179,11 +190,16 @@ module Maquina
         say "  2. bin/rails db:migrate"
         say ""
         say "Configuration:", :yellow
-        say "  - Set credentials: bin/rails credentials:edit"
-        say "    backstage:"
-        say "      username: your_user"
-        say "      password: your_password"
-        say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        if @backstage_signin
+          say_backstage_access
+        else
+          say "  - Set credentials: bin/rails credentials:edit"
+          say "    backstage:"
+          say "      username: your_user"
+          say "      password: your_password"
+          say "  - Or set ENV vars: #{options[:user_env_var]}, #{options[:password_env_var]}"
+        end
+        say_backstage_signin_pending if @backstage_signin
         say ""
         say "Job failures: app/jobs/application_job.rb now tags reported errors with", :yellow
         say "  job class, arguments, and id so background-job failures show up in the"
@@ -192,6 +208,7 @@ module Maquina
 
         show_agent_post_install if agent?
         show_mcp_tools_post_install if @mcp_tools_installed
+        show_mcp_write_pending if @mcp_write_pending
       end
 
       private
@@ -223,8 +240,15 @@ module Maquina
       end
 
       def show_mcp_tools_post_install
-        say "MCP tools (admin only, read-only):", :green
-        say "  app/models/mcp/tools/solid_errors.rb: list_failures, get_failure, top_exceptions"
+        say "MCP tools (admin only):", :green
+        say "  app/models/mcp/tools/solid_errors.rb: list_failures, get_failure, top_exceptions" \
+          "#{", resolve_failure (needs the write scope)" if options[:mcp_write]}"
+        say ""
+      end
+
+      def show_mcp_write_pending
+        say "app/models/mcp/tools/solid_errors.rb already exists without resolve_failure.", :yellow
+        say "  Delete it and run `rails g maquina:solid_errors --prefix #{options[:prefix]} --mcp-write` again to add it."
         say ""
       end
 

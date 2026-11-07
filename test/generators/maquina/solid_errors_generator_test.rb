@@ -444,6 +444,63 @@ class Maquina::Generators::SolidErrorsGeneratorTest < Rails::Generators::TestCas
     assert_file "app/agents/failure_triage.rb", /class FailureTriage/
   end
 
+  test "adds resolve_failure as a write tool with --mcp-write" do
+    write_mcp_registry
+
+    output = run_generator %w[--prefix /admin --mcp-write]
+
+    assert_file "app/models/mcp/tools/solid_errors.rb" do |content|
+      assert_match(/WRITE_TOOLS = %w\[resolve_failure\]\.freeze/, content)
+      assert_match(/name: "resolve_failure"/, content)
+      assert_match(/readOnlyHint: false/, content)
+      assert_match(/def self\.resolve_failure\(scope:, fingerprint:\)\n.*update!\(resolved_at: Time\.current\)/m, content)
+      assert_match(/\[MCP\] resolve_failure fingerprint=/, content)
+    end
+    assert_match(/resolve_failure \(needs the write scope\)/, output)
+  end
+
+  test "both MCP tool variants are valid Ruby" do
+    write_mcp_registry
+
+    [%w[--prefix /admin], %w[--prefix /admin --mcp-write]].each do |args|
+      FileUtils.rm_f(File.join(destination_root, "app/models/mcp/tools/solid_errors.rb"))
+      run_generator args
+
+      assert RubyVM::InstructionSequence.compile(File.read(File.join(destination_root, "app/models/mcp/tools/solid_errors.rb")))
+    end
+  end
+
+  test "keeps an existing MCP tool file and says how to add the write tool" do
+    write_mcp_registry
+    run_generator %w[--prefix /admin]
+
+    output = run_generator %w[--prefix /admin --mcp-write]
+
+    assert_file "app/models/mcp/tools/solid_errors.rb" do |content|
+      assert_no_match(/resolve_failure/, content)
+    end
+    assert_match(/already exists without resolve_failure/, output)
+  end
+
+  # Solid Errors has no counter columns and no recent_occurrence association:
+  # its own dashboard selects them as SQL aliases. A query on a plain record
+  # must count occurrences itself.
+  test "ErrorsQuery counts occurrences instead of reading columns Solid Errors does not have" do
+    write_mcp_registry
+
+    run_generator %w[--prefix /admin]
+
+    assert_file "app/agents/errors_query.rb" do |content|
+      assert_no_match(/occurrences_count|recent_occurrence|parsed_backtrace/, content)
+      assert_match(/SolidErrors::Occurrence\.where\(error_id: .*\)\.group\(:error_id\)/, content)
+      assert_match(/\.group\(:error_id\)\.order\(Arel\.sql\("COUNT\(\*\) DESC"\)/, content)
+    end
+    assert_file "test/models/mcp/tools/solid_errors_test.rb" do |content|
+      assert_match(/test "top_exceptions puts the error with the most occurrences first"/, content)
+      assert_match(/test "get_failure returns the job context redacted and the backtrace"/, content)
+    end
+  end
+
   test "running twice with maquina:mcp changes nothing the second time" do
     write_mcp_registry
 
